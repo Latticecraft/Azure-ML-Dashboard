@@ -120,7 +120,8 @@ def get_df(path):
         df_delta = pd.read_csv((Path(path) / d), parse_dates=['runDate'])
         df_all = pd.concat([df_all, df_delta], ignore_index=True)
 
-    return df_all
+    df_all['runDate'] = pd.to_datetime(df_all['runDate'])
+    return df_all.sort_values('runDate', ascending=False)
 
 
 # define functions 

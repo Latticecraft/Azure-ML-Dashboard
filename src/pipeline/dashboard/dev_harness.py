@@ -37,16 +37,16 @@ def get_df(ds, path):
 
 
 # connect to workspace
-auth = InteractiveLoginAuthentication(tenant_id='9c8b18d3-0d09-4525-a546-341d38f12190')
+auth = InteractiveLoginAuthentication(tenant_id='839a5dd3-4df0-43b2-a507-3c1808d97dee')
 
-ws = Workspace(subscription_id='83b4b5c6-51ae-4d5a-a7cf-63d20ffc2754',
-               resource_group='MLproduct1',
-               workspace_name='sanmlsvc',
+ws = Workspace(subscription_id='8ea78212-550b-4294-97b7-1e432540fe46',
+               resource_group='ML4',
+               workspace_name='ltcftmlprd4',
                auth=auth)
 
 ds = Datastore.get(ws, 'output')
-df_runinfo = get_df(ds, 'bankcampaign/runinfo')
-df_trainlog = get_df(ds, 'bankcampaign/trainlog')
+df_runinfo = get_df(ds, 'Bank-Campaign/runinfo')
+df_trainlog = get_df(ds, 'Bank-Campaign/trainlog')
 
 # theme
 cmap_greens = bp.Greens[256][::-1][64:]
@@ -73,28 +73,51 @@ if len(df_trainlog) > 0:
 '''
 from sklearn.metrics import roc_curve, auc, brier_score_loss
 
-def get_run_history(df_runinfo, df_trainlog):
-    # munge
-    end_date = datetime.now().date()
-    start_date = (end_date - timedelta(days=14))
+def get_correlation_plot(feature1, feature2):
+    opts_scatter = dict(axiswise=True, jitter=0.2)
+    opts_rasterize = dict(width=300, height=300)
+    opts_spread = dict(axiswise=True, cmap=bp.Blues[256][::-1][64:], cnorm='eq_hist', padding=0.1)
 
-    df1 = (df_runinfo.assign(runDate=lambda x:x['runDate'].dt.date).groupby('runDate')['runId'].count())
-    df2 = (df_trainlog.assign(runDate=lambda x:x['runDate'].dt.date).groupby('runDate')['runId'].count())
-    df = pd.DataFrame({'featurizeCount':df1, 'trainCount':df2}).fillna(0).loc[start_date:end_date]
+    viz_scatter = hv.Scatter((feature1, feature2)).opts(**opts_scatter)
+    viz_rasterize = rasterize(viz_scatter).opts(**opts_rasterize)
+    viz_spread = spread(viz_rasterize, px=4, shape='square').opts(**opts_spread)
+
+    return viz_spread
+
+
+def get_histogram(f):
+    opts_spikes = dict(line_alpha=0.4, spike_length=0.1)
+    opts_rasterize = dict(width=300, height=300)
+    opts_spread = dict(axiswise=True, cmap=bp.Reds[256][::-1][64:], cnorm='eq_hist')
+
+    viz_spikes = hv.Spikes(f).opts(**opts_spikes)
+    viz_rasterize = rasterize(viz_spikes).opts(**opts_rasterize)
+    viz_spread = spread(viz_rasterize, px=4, shape='square').opts(**opts_spread)
+
+    return viz_spread
+
+
+def get_density_plots(df, df_trainlog):
+    p = re.compile('feature_rank_([0-2])$')    
+    features = df_trainlog.filter(regex=p, axis=1).iloc[0]
 
     # visual elements
-    opts = dict(width=900, height=500)
-    
-    overlay = hv.Overlay([hv.Area((list(df.index), df.iloc[:,i])) for i in np.arange(2)])
-    stack = hv.Area.stack(overlay).opts(**opts)
+    dict_grid = {
+        f'{f1} x {f2}':get_correlation_plot(df[f1], df[f2]) if i1 != i2 else 
+                       get_histogram(df[f1]) 
+                       for (i1,f1) in enumerate(features) 
+                       for (i2,f2) in enumerate(features)
+    }
 
-    return stack
+    grid = hv.NdLayout(dict_grid).cols(len(features))
+    
+    return grid
 
 def get_viz():
     '''
         Begin visualization code
     '''
-    viz = get_run_history(df_runinfo, df_trainlog)
+    viz = get_density_plots(dict_files['X_train'], df_trainlog)
     return viz
     
 
