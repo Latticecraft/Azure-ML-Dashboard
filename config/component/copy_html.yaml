@@ -1,0 +1,30 @@
+$schema: https://azuremlschemas.azureedge.net/latest/commandComponent.schema.json
+type: command
+
+name: copy_html
+display_name: copy html
+is_deterministic: False
+command: >-
+  python copy_html.py
+  --input1 ${{inputs.input1}}
+  --input2 ${{inputs.input2}}
+  --input3 ${{inputs.input3}}
+  --input4 ${{inputs.input4}}
+  --input5 ${{inputs.input5}}
+  --html ${{outputs.html}}
+code: ../../src/pipeline/dashboard
+environment: azureml:ltcftenv@latest
+inputs:
+  input1:
+    type: path
+  input2:
+    type: path
+  input3:
+    type: path
+  input4:
+    type: path
+  input5:
+    type: path
+outputs:
+  html:
+    type: path

@@ -1,0 +1,1 @@
+{ "runs": [{"date": "5/18/2022", "num_featurize": 2, "num_train": 4, "best_score": 78}, {"date": "5/16/2022", "num_featurize": 3, "num_train": 3, "best_score": 82}] }

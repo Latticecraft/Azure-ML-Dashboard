@@ -1,0 +1,27 @@
+$schema: https://azuremlschemas.azureedge.net/latest/commandComponent.schema.json
+type: command
+
+name: evaluate
+display_name: evaluate
+is_deterministic: False
+command: >-
+  python evaluate.py
+  --datasets-pkl ${{inputs.datasets_pkl}}
+  --runinfo ${{inputs.runinfo}}
+  --trainlog ${{inputs.trainlog}}
+  --label ${{inputs.label}}
+  --transformed-data ${{outputs.transformed_data}}
+code: ../../src/pipeline/dashboard
+environment: azureml:ltcftenv@latest
+inputs:
+  datasets_pkl:
+    type: path
+  runinfo:
+    type: path
+  trainlog:
+    type: path
+  label:
+    type: string
+outputs:
+  transformed_data:
+    type: path

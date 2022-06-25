@@ -1,0 +1,25 @@
+$schema: https://azuremlschemas.azureedge.net/latest/commandComponent.schema.json
+type: command
+
+name: visualize_featurize
+display_name: visualize_featurize
+is_deterministic: False
+command: >-
+  python visualize_featurize.py
+  --datasets-pkl ${{inputs.datasets_pkl}}
+  --runinfo ${{inputs.runinfo}}
+  --trainlog ${{inputs.trainlog}}
+  --transformed-data ${{outputs.transformed_data}}
+code: ../dashboard
+inputs:
+  datasets_pkl:
+    type: path
+  runinfo:
+    type: path
+  trainlog:
+    type: path
+outputs:
+  transformed_data:
+    type: path
+environment:
+  image: b0aba260969b417d890158a6301346c4.azurecr.io/azureml/azureml_1b6cd61719e4b0fb2f4d40e39a9cb35e
