@@ -22,7 +22,7 @@ hv.extension('bokeh')
 pn.extension()
 
 
-def get_samples_table(df_runinfo):
+def get_samples_table(ctx, df_runinfo):
     p = re.compile('y_(train|valid|test)_([0-9])$')
 
     df = pd.DataFrame([{
@@ -40,7 +40,18 @@ def get_samples_table(df_runinfo):
     bars_classdist = hv.Bars(df, ['fold','class'], 'value').opts(**opts)
     return bars_classdist
 
-def get_dtypes(df):
+
+def get_label_distributions(ctx, dict_files):
+    opts_dist = dict(filled=False, line_color=hv.Cycle())
+    opts_overlay = dict(width=450, height=450)
+
+    dists = {k: hv.Distribution(dict_files[k][ctx['label']]).opts(**opts_dist) for k in ['y_train', 'y_valid', 'y_test']}
+    overlay = hv.NdOverlay(dists).opts(**opts_overlay)
+
+    return overlay
+
+
+def get_dtypes(ctx, df):
     p = re.compile('dtypes\.(predfs|postdfs)\.(bool|int64|float64)$')
 
     df_samples = df[[c for c in df.columns if p.match(c)]].reset_index(drop=True).to_dict()
@@ -64,11 +75,11 @@ def get_dtypes(df):
     )
 
     opts = dict(width=450, height=450, axiswise=True)
-    bars_dtypes = hv.Bars(data2, ['stage','dtype'], 'value').options(**opts)
+    bars_dtypes = hv.Bars(data2, ['stage','dtype'], 'value').opts(**opts)
     return bars_dtypes
 
 
-def get_correlation_plot(feature1, feature2):
+def get_correlation_plot(ctx, feature1, feature2):
     opts_scatter = dict(axiswise=True, jitter=0.2)
     opts_rasterize = dict(width=300, height=300)
     opts_spread = dict(axiswise=True, cmap=bp.Blues[256][::-1][64:], cnorm='eq_hist', padding=0.1)
@@ -80,7 +91,7 @@ def get_correlation_plot(feature1, feature2):
     return viz_spread
 
 
-def get_histogram(f):
+def get_feature_density(ctx, f):
     opts_spikes = dict(line_alpha=0.4, spike_length=0.1)
     opts_rasterize = dict(width=300, height=300)
     opts_spread = dict(axiswise=True, cmap=bp.Reds[256][::-1][64:], cnorm='eq_hist')
@@ -92,14 +103,14 @@ def get_histogram(f):
     return viz_spread
 
 
-def get_density_plots(df, df_trainlog):
+def get_density_plots(ctx, df, df_trainlog):
     p = re.compile('feature_rank_([0-2])$')    
     features = df_trainlog.filter(regex=p, axis=1).iloc[0]
 
     # visual elements
     dict_grid = {
-        f'{f1} x {f2}':get_correlation_plot(df[f1], df[f2]) if i1 != i2 else 
-                       get_histogram(df[f1]) 
+        f'{f1} x {f2}':get_correlation_plot(ctx, df[f1], df[f2]) if i1 != i2 else 
+                       get_feature_density(ctx, df[f1]) 
                        for (i1,f1) in enumerate(features) 
                        for (i2,f2) in enumerate(features)
     }
@@ -135,16 +146,26 @@ def main(ctx):
     model = joblib.load('data/model.pkl')
     dict_files = pd.read_pickle('data/datasets.pkl')
 
-    viz_samples = get_samples_table(df_runinfo)
-    viz_dtypes = get_dtypes(df_runinfo)
-    viz_corr = get_density_plots(dict_files['X_train'], df_trainlog)
+    viz_dtypes = get_dtypes(ctx, df_runinfo)
+    viz_corr = get_density_plots(ctx, dict_files['X_train'], df_trainlog)
 
-    viz_samples_dtypes = viz_samples + viz_dtypes
-
-    hv.save(viz_samples, f'outputs/samples.html')
     hv.save(viz_dtypes, f'outputs/dtypes.html')
-    hv.save(viz_samples_dtypes, f'outputs/samples_dtypes.html')
     hv.save(viz_corr, f'outputs/corr.html')
+
+    if ctx['type'] != 'Regression':
+        viz_samples = get_samples_table(ctx, df_runinfo)
+        viz_samples_dtypes = viz_samples + viz_dtypes
+
+        hv.save(viz_samples, f'outputs/samples.html')
+        hv.save(viz_samples_dtypes, f'outputs/samples_dtypes.html')
+
+    else:
+        viz_label_dist = get_label_distributions(ctx, dict_files)
+        viz_label_distributions_dtypes = viz_label_dist + viz_dtypes
+
+        hv.save(viz_label_dist, f'outputs/label_distributions.html')
+        hv.save(viz_label_distributions_dtypes, f'outputs/label_distributions_dtypes.html')
+    
     copy_tree('outputs', args.transformed_data)
 
 
@@ -158,7 +179,9 @@ def start(args):
         'args': args,
         'run': run,
         'data': client.get_run(mlflow.active_run().info.run_id).data,
-        'project': tags['project']
+        'project': tags['project'],
+        'type': tags['type'],
+        'label': tags['label']
     }
 
 

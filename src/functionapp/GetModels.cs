@@ -38,6 +38,7 @@ namespace functions
             HttpResponseMessage response = await client.GetAsync(url);
             response.EnsureSuccessStatusCode();
             string responseBody = await response.Content.ReadAsStringAsync();
+            log.LogInformation(responseBody);
 
             var data = JObject.Parse(responseBody);
 

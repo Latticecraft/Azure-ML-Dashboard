@@ -33,11 +33,19 @@ def get_shap(explainer, dict_files, feature):
     ranked_vals = explanations.get_ranked_local_values()
 
     # munge
-    df_tmp = pd.DataFrame(ranked_names)
-    df_names = pd.DataFrame(df_tmp.iloc[1].values.tolist(), index=df_tmp.iloc[1].index)
+    if len(np.shape(ranked_names)) == 2: # Regression
+        df_tmp = pd.DataFrame(ranked_names)
+        df_names = pd.DataFrame(df_tmp.values.tolist(), index=df_tmp.index)
 
-    df_tmp = pd.DataFrame(ranked_vals)
-    df_vals = pd.DataFrame(df_tmp.iloc[1].values.tolist(), index=df_tmp.iloc[1].index)
+        df_tmp = pd.DataFrame(ranked_vals)
+        df_vals = pd.DataFrame(df_tmp.values.tolist(), index=df_tmp.index)
+    
+    else: # Classification
+        df_tmp = pd.DataFrame(ranked_names)
+        df_names = pd.DataFrame(df_tmp.iloc[1].values.tolist(), index=df_tmp.iloc[1].index)
+
+        df_tmp = pd.DataFrame(ranked_vals)
+        df_vals = pd.DataFrame(df_tmp.iloc[1].values.tolist(), index=df_tmp.iloc[1].index)
 
     feature_map = {
         feature: [(x == feature).argmax() for (i,x) in df_names.iterrows()]
@@ -54,7 +62,7 @@ def get_shap(explainer, dict_files, feature):
     df_scatter = pd.DataFrame({'x': X[feature], 'y': y[feature]})
 
     # visualize
-    opts_scatter = dict(jitter=0.2)    
+    opts_scatter = dict(jitter=0.2) 
     opts_shaded = dict(axiswise=True, cmap=bp.Blues[256][::-1][64:], cnorm='eq_hist', padding=0.1)
     opts_curve = dict(axiswise=True, line_dash='dashed', color='black')
     overlay_opts = dict(axiswise=True)
@@ -68,8 +76,8 @@ def get_shap(explainer, dict_files, feature):
 
 def get_shapgrid(explainer, dict_files):
     explanations = explainer.explain_global(dict_files['X_test'])
-    dict = explanations.get_feature_importance_dict()
-    top_features = list(pd.DataFrame(dict, index=[1]).T.head(9).index)
+    dict_fi = explanations.get_feature_importance_dict()
+    top_features = list(pd.DataFrame(dict_fi, index=[1]).T.head(9).index)
 
     dict_grid = {f:get_shap(explainer, dict_files, f) for (i,f) in enumerate(top_features)}
     grid = hv.NdLayout(dict_grid).cols(3)

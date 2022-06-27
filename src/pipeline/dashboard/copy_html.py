@@ -16,6 +16,10 @@ def main(ctx):
     # copy inputs to output
     datastore = Datastore.get(ctx['run'].experiment.workspace, 'output')
 
+    Dataset.File.upload_directory(src_dir=ctx['args'].models,
+        target=DataPath(datastore, f'/'),
+        overwrite=True)
+
     Dataset.File.upload_directory(src_dir=ctx['args'].input1,
         target=DataPath(datastore, f'{ctx["project"]}/html/latest'),
         overwrite=True)
@@ -79,6 +83,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     # add arguments
+    parser.add_argument('--models', type=str)
     parser.add_argument("--input1", type=str)
     parser.add_argument("--input2", type=str)
     parser.add_argument("--input3", type=str)

@@ -6,6 +6,7 @@ display_name: copy html
 is_deterministic: False
 command: >-
   python copy_html.py
+  --models ${{inputs.models}}
   --input1 ${{inputs.input1}}
   --input2 ${{inputs.input2}}
   --input3 ${{inputs.input3}}
@@ -15,6 +16,8 @@ command: >-
 code: ../../src/pipeline/dashboard
 environment: azureml:ltcftenv@latest
 inputs:
+  models:
+    type: path
   input1:
     type: path
   input2:

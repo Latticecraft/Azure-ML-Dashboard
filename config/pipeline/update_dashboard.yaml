@@ -1,7 +1,5 @@
 $schema: https://azuremlschemas.azureedge.net/latest/pipelineJob.schema.json
 type: pipeline
-properties:
-  projectname:
 inputs:
   datasets_pkl:
     type: uri_file
@@ -14,7 +12,6 @@ inputs:
     type: uri_folder
     path: azureml://datastores/output/paths/placeholder
     mode: ro_mount
-  projectname: placeholder
   label: placeholder
 outputs:
   html: 
@@ -24,6 +21,11 @@ outputs:
 experiment_name: marketing
 compute: azureml:cpu-cluster
 jobs:
+  models:
+    type: command
+    component: file:../component/models.yaml
+    outputs:
+      transformed_data:
   eda:
     type: command
     component: file:../component/eda.yaml
@@ -76,6 +78,7 @@ jobs:
     type: command
     component: file:../component/copy_html.yaml
     inputs:
+      models: ${{parent.jobs.models.outputs.transformed_data}}
       input1: ${{parent.jobs.eda.outputs.transformed_data}}
       input2: ${{parent.jobs.drift.outputs.transformed_data}}
       input3: ${{parent.jobs.evaluate.outputs.transformed_data}}

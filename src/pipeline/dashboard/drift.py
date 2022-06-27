@@ -20,7 +20,7 @@ hv.extension('bokeh')
 pn.extension()
 
 
-def get_datadrift(df):
+def get_datadrift(ctx, df):
     p = re.compile('^stats\.([a-zA-Z]*)_mean')
 
     df = (pd.DataFrame([{
@@ -60,9 +60,9 @@ def get_datadrift(df):
     return bw[largest_divergences] * sc[largest_divergences]
 
 
-def get_modeldrift(df):
+def get_modeldrift(ctx, df):
     # data munge
-    p = re.compile('(weighted avg_f1-score)|(runDate)')
+    p = re.compile(f'({ctx["primary_metric"]})|(runDate)')
 
     df = (df.set_index('runId')
             .filter(regex=p, axis=1)
@@ -74,7 +74,7 @@ def get_modeldrift(df):
     start_date = end_date - timedelta(days=14)
 
     overlay = hv.NdOverlay({
-            g: hv.Scatter(df[df['runDate'] == g], 'runDate', 'weighted avg_f1-score') for i,g in enumerate(df['runDate'])
+            g: hv.Scatter(df[df['runDate'] == g], 'runDate', ctx['primary_metric']) for i,g in enumerate(df['runDate'])
         }).redim.values(runDate=[start_date, end_date]).options(**opts)
 
     errorbars = hv.ErrorBars([(k, el.reduce(function=np.mean), el.reduce(function=np.std)) for k, el in overlay.items()])
@@ -101,8 +101,8 @@ def main(ctx):
     df_runinfo = get_df(ctx['args'].runinfo)
     df_trainlog = get_df(ctx['args'].trainlog)
 
-    viz_datadrift = get_datadrift(df_runinfo)
-    viz_modeldrift = get_modeldrift(df_trainlog)
+    viz_datadrift = get_datadrift(ctx, df_runinfo)
+    viz_modeldrift = get_modeldrift(ctx, df_trainlog)
 
     hv.save(viz_datadrift, f'outputs/datadrift.html')
     hv.save(viz_modeldrift, f'outputs/modeldrift.html')
@@ -119,7 +119,9 @@ def start(args):
         'args': args,
         'run': run,
         'data': client.get_run(mlflow.active_run().info.run_id).data,
-        'project': tags['project']
+        'project': tags['project'],
+        'type': tags['type'],
+        'primary_metric': tags['primary_metric']
     }
 
 

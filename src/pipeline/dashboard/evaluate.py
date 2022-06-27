@@ -25,7 +25,19 @@ hv.extension('bokeh')
 pn.extension()
 
 
-def get_confusion_matrix(model, dict_files, label):
+def get_residuals_plot(ctx, model, dict_files):
+    # get metrics
+    yhat = model.predict(dict_files['X_test'])
+    residuals = dict_files['y_test'][ctx['label']] - yhat
+
+    # visualize
+    opts = dict(width=450, height=450)
+    dist = hv.Distribution(residuals).opts(**opts)
+
+    return dist
+
+
+def get_confusion_matrix(ctx, model, dict_files, label):
     # generate metrics
     yhat_proba = [x[1] for x in model.predict_proba(dict_files['X_test'])]
     yhat = [1 if x >= 0.5 else 0 for x in yhat_proba]
@@ -70,7 +82,7 @@ def get_confusion_matrix(model, dict_files, label):
     return confmatrix
 
 
-def get_reliability_curve(model, dict_files):
+def get_reliability_curve(ctx, model, dict_files):
     # get metrics
     yhat_proba = [x[1] for x in model.predict_proba(dict_files['X_test'])]
     prob_true, prob_pred = calibration_curve(dict_files['y_test'], yhat_proba)
@@ -95,7 +107,7 @@ def get_reliability_curve(model, dict_files):
     return curve.opts(**opts)
 
 
-def get_roc(model, dict_files):
+def get_roc(ctx, model, dict_files):
     # get metrics
     yhat_proba = [x[1] for x in model.predict_proba(dict_files['X_test'])]
     fpr, tpr, thresholds = roc_curve(dict_files['y_test'], yhat_proba)
@@ -120,16 +132,16 @@ def get_roc(model, dict_files):
     return roc
 
 
-def get_sweep_by(df_trainlog, key):
+def get_sweep_by(ctx, df_trainlog, key):
     df = pd.DataFrame({
         'balancer': eval(str.encode(df_trainlog.iloc[0]['sweep_balancer'])),
         'imputer': eval(str.encode(df_trainlog.iloc[0]['sweep_imputer'])),
-        'weighted avg_f1-score': eval(str.encode(df_trainlog.iloc[0]['sweep_weighted avg_f1-score']))
+        'primary_metric': eval(str.encode(df_trainlog.iloc[0]['sweep_primary_metric']))
     })
     
     opts = dict(width=450, height=450)
-    sc = hv.Scatter(df, [key], 'weighted avg_f1-score').options(**opts)
-    bw = hv.BoxWhisker(df, [key], 'weighted avg_f1-score').options(**opts)
+    sc = hv.Scatter(df, [key], 'primary_metric').options(**opts)
+    bw = hv.BoxWhisker(df, [key], 'primary_metric').options(**opts)
     return bw * sc
 
 
@@ -158,18 +170,27 @@ def main(ctx):
     model = joblib.load('data/model.pkl')
     dict_files = pd.read_pickle('data/datasets.pkl')
 
-    viz_confmatrix = get_confusion_matrix(model, dict_files, ctx['args'].label)
-    viz_reliability = get_reliability_curve(model, dict_files)
-    viz_roc = get_roc(model, dict_files)
-    viz_sweep = get_sweep_by(df_trainlog, 'balancer') + get_sweep_by(df_trainlog, 'imputer')
+    if ctx['type'] != 'Regression':
+        viz_confmatrix = get_confusion_matrix(ctx, model, dict_files, ctx['label'])
+        viz_reliability = get_reliability_curve(ctx, model, dict_files)
+        viz_roc = get_roc(ctx, model, dict_files)
+        roc_reliability = viz_roc + viz_reliability
 
-    roc_reliability = viz_roc + viz_reliability
+        hv.save(viz_confmatrix, f'outputs/confmatrix.html')
+        hv.save(viz_reliability, f'outputs/reliability.html')
+        hv.save(viz_roc, f'outputs/roc.html')
+        hv.save(roc_reliability, f'outputs/roc_reliability.html')
 
-    hv.save(viz_reliability, f'outputs/reliability.html')
-    hv.save(viz_roc, f'outputs/roc.html')
-    hv.save(roc_reliability, f'outputs/roc_reliability.html')
-    hv.save(viz_confmatrix, f'outputs/confmatrix.html')
+    else:
+        viz_residuals = get_residuals_plot(ctx, model, dict_files)
+
+        hv.save(viz_residuals, f'outputs/residuals.html')
+
+    viz_sweep = get_sweep_by(ctx, df_trainlog, 'balancer') + \
+                get_sweep_by(ctx, df_trainlog, 'imputer')
+
     hv.save(viz_sweep, f'outputs/sweep.html')
+
     copy_tree('outputs', args.transformed_data)
 
 
@@ -183,7 +204,10 @@ def start(args):
         'args': args,
         'run': run,
         'data': client.get_run(mlflow.active_run().info.run_id).data,
-        'project': tags['project']
+        'project': tags['project'],
+        'type': tags['type'],
+        'label': tags['label'],
+        'primary_metric': tags['primary_metric']
     }
 
 
