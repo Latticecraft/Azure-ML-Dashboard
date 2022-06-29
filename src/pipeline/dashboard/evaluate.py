@@ -1,23 +1,17 @@
 #%%
 import os, argparse
-import re
 import joblib
-import numpy as np
 import pandas as pd
 import holoviews as hv
 import panel as pn
-import bokeh.palettes as bp
 import glob
-import shutil
 import mlflow
 
-from datetime import datetime, timedelta
 from azureml.core import Run
 from distutils.dir_util import copy_tree
 from holoviews import dim, opts
-from interpret.ext.blackbox import TabularExplainer
 from pathlib import Path
-from sklearn.metrics import auc, confusion_matrix, classification_report, roc_curve, brier_score_loss
+from sklearn.metrics import auc, confusion_matrix, classification_report, roc_curve, brier_score_loss, explained_variance_score, mean_absolute_error, mean_squared_error, r2_score, mean_absolute_percentage_error
 from sklearn.calibration import calibration_curve
 
 
@@ -29,12 +23,32 @@ def get_residuals_plot(ctx, model, dict_files):
     # get metrics
     yhat = model.predict(dict_files['X_test'])
     residuals = dict_files['y_test'][ctx['label']] - yhat
+    explained_variance = explained_variance_score(dict_files['y_test'], yhat)
+    mae = mean_absolute_error(dict_files['y_test'], yhat)
+    rmse = mean_squared_error(dict_files['y_test'], yhat, squared=False)
+    r2 = r2_score(dict_files['y_test'], yhat)
+    mape = mean_absolute_percentage_error(dict_files['y_test'], yhat)
 
     # visualize
-    opts = dict(width=450, height=450)
-    dist = hv.Distribution(residuals).opts(**opts)
+    opts_dist = dict(width=450, height=450)
+    opts_metrics = dict(width=450, height=450, xlim=(0,1), ylim=(0,1), xaxis='bare', yaxis='bare')
 
-    return dist
+    dist = hv.Distribution(residuals).opts(**opts_dist)
+
+    metrics = (hv.Text(0.3,0.9,'Explained Variance') *
+        hv.Text(0.3,0.85,str(round(explained_variance, 3))) *
+        hv.Text(0.3,0.7,'MAE') *
+        hv.Text(0.3,0.65,str(round(mae, 3))) *
+        hv.Text(0.3,0.5,'RMSE') *
+        hv.Text(0.3,0.45,str(round(rmse, 3))) *
+        hv.Text(0.3,0.3,'R^2') *
+        hv.Text(0.3,0.25,str(round(r2, 3))) *
+        hv.Text(0.3,0.1,'MAPE') *
+        hv.Text(0.3,0.05,str(round(mape, 3)))).opts(**opts_metrics)
+        
+    overlay = dist + metrics
+
+    return overlay
 
 
 def get_confusion_matrix(ctx, model, dict_files, label):

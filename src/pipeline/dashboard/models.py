@@ -10,7 +10,13 @@ from distutils.dir_util import copy_tree
 # define functions 
 def main(ctx):
     models = Model.list(workspace=ctx['run'].experiment.workspace, latest=True)
-    json_models = [{'name': m.name, 'type': models[i].tags['type']} for i,m in enumerate(models)]
+    json_models = [{
+        'name': m.name, 
+        'type': models[i].tags['type'] if 'type' in models[i].tags else 'Unknown', 
+        'primary_metric': models[i].tags['primary_metric'] if 'primary_metric' in models[i].tags else 'Unknown', 
+        'score': models[i].tags['best_score'] if 'best_score' in models[i].tags else 'Unknown',
+        'label': models[i].tags['label'] if 'label' in models[i].tags else 'Unknown'
+    } for i,m in enumerate(models)]
 
     with open('outputs/models.json', 'w') as f:
         json.dump(json_models, f)

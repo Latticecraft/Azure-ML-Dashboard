@@ -71,19 +71,39 @@ if len(df_trainlog) > 0:
     Use this function as a test harness to develop and test visualization code
     to be included in the HTML5 dashboard 
 '''
-from sklearn.metrics import roc_curve, auc, brier_score_loss
+from sklearn.metrics import explained_variance_score, mean_absolute_error, mean_squared_error, r2_score, mean_absolute_percentage_error
 
 
 def get_residuals_plot(ctx, model, dict_files):
     # get metrics
     yhat = model.predict(dict_files['X_test'])
     residuals = dict_files['y_test']['MEDV'] - yhat
+    explained_variance = explained_variance_score(dict_files['y_test'], yhat)
+    mae = mean_absolute_error(dict_files['y_test'], yhat)
+    rmse = mean_squared_error(dict_files['y_test'], yhat, squared=False)
+    r2 = r2_score(dict_files['y_test'], yhat)
+    mape = mean_absolute_percentage_error(dict_files['y_test'], yhat)
 
     # visualize
-    opts = dict(width=450, height=450)
-    dist = hv.Distribution(residuals).opts(**opts)
+    opts_dist = dict(width=450, height=450)
+    opts_metrics = dict(width=450, height=450, xlim=(0,1), ylim=(0,1), xaxis='bare', yaxis='bare')
 
-    return dist
+    dist = hv.Distribution(residuals).opts(**opts_dist)
+
+    metrics = (hv.Text(0.3,0.9,'Explained Variance') *
+        hv.Text(0.3,0.85,str(round(explained_variance, 3))) *
+        hv.Text(0.3,0.7,'MAE') *
+        hv.Text(0.3,0.65,str(round(mae, 3))) *
+        hv.Text(0.3,0.5,'RMSE') *
+        hv.Text(0.3,0.45,str(round(rmse, 3))) *
+        hv.Text(0.3,0.3,'R^2') *
+        hv.Text(0.3,0.25,str(round(r2, 3))) *
+        hv.Text(0.3,0.1,'MAPE') *
+        hv.Text(0.3,0.05,str(round(mape, 3)))).opts(**opts_metrics)
+        
+    overlay = dist + metrics
+
+    return overlay
 
 def get_viz():
     '''
