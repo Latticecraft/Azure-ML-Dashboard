@@ -1,20 +1,16 @@
-#%%
 import os, argparse
 import re
 import joblib
-import numpy as np
 import pandas as pd
 import holoviews as hv
 import panel as pn
-import bokeh.palettes as bp
 import glob
-import shutil
 import mlflow
 
-from datetime import datetime, timedelta
 from azureml.core import Run
 from distutils.dir_util import copy_tree
-from holoviews.operation.datashader import spread, rasterize
+from holoviews import opts
+from holoviews.operation import gridmatrix
 from pathlib import Path
 
 
@@ -79,45 +75,19 @@ def get_dtypes(ctx, df):
     return bars_dtypes
 
 
-def get_correlation_plot(ctx, feature1, feature2):
-    opts_scatter = dict(axiswise=True, jitter=0.2)
-    opts_rasterize = dict(width=300, height=300)
-    opts_spread = dict(axiswise=True, cmap=bp.Blues[256][::-1][64:], cnorm='eq_hist', padding=0.1)
-
-    viz_scatter = hv.Scatter((feature1, feature2)).opts(**opts_scatter)
-    viz_rasterize = rasterize(viz_scatter).opts(**opts_rasterize)
-    viz_spread = spread(viz_rasterize, px=4, shape='square').opts(**opts_spread)
-
-    return viz_spread
-
-
-def get_feature_density(ctx, f):
-    opts_spikes = dict(line_alpha=0.4, spike_length=0.1)
-    opts_rasterize = dict(width=300, height=300)
-    opts_spread = dict(axiswise=True, cmap=bp.Reds[256][::-1][64:], cnorm='eq_hist')
-
-    viz_spikes = hv.Spikes(f).opts(**opts_spikes)
-    viz_rasterize = rasterize(viz_spikes).opts(**opts_rasterize)
-    viz_spread = spread(viz_rasterize, px=4, shape='square').opts(**opts_spread)
-
-    return viz_spread
-
-
 def get_density_plots(ctx, df, df_trainlog):
     p = re.compile('feature_rank_([0-2])$')    
     features = df_trainlog.filter(regex=p, axis=1).iloc[0]
 
     # visual elements
-    dict_grid = {
-        f'{f1} x {f2}':get_correlation_plot(ctx, df[f1], df[f2]) if i1 != i2 else 
-                       get_feature_density(ctx, df[f1]) 
-                       for (i1,f1) in enumerate(features) 
-                       for (i2,f2) in enumerate(features)
-    }
+    features_ds = hv.Dataset(df[features])
+    density_grid = gridmatrix(features_ds, diagonal_type=hv.Distribution, chart_type=hv.HexTiles)
 
-    grid = hv.NdLayout(dict_grid).cols(len(features))
-    
-    return grid
+    return density_grid.opts(
+        opts.GridMatrix(plot_size=(250,250)),
+        opts.HexTiles(min_count=0, xaxis='bottom', yaxis='bare'),
+        opts.Distribution(xaxis='bottom', yaxis='bare')
+    )
 
 
 def get_df(path):

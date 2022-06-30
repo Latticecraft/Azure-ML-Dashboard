@@ -1,4 +1,3 @@
-#%%
 import os, argparse
 import re
 import joblib
@@ -6,20 +5,15 @@ import numpy as np
 import pandas as pd
 import holoviews as hv
 import panel as pn
-import bokeh.palettes as bp
 import glob
-import shutil
 import mlflow
 
-from datetime import datetime, timedelta
 from azureml.core import Run
+from datetime import timedelta
 from distutils.dir_util import copy_tree
-from holoviews import dim, opts
-from holoviews.operation.datashader import spread, rasterize
+from holoviews import opts
 from interpret.ext.blackbox import TabularExplainer
 from pathlib import Path
-from sklearn.metrics import auc, confusion_matrix, classification_report, roc_curve, brier_score_loss
-from sklearn.calibration import calibration_curve
 
 
 hv.extension('bokeh')
@@ -59,20 +53,14 @@ def get_shap(explainer, dict_files, feature):
         feature: [x for x in dict_files['X_test'][feature]]
     }
 
-    df_scatter = pd.DataFrame({'x': X[feature], 'y': y[feature]})
+    df_hex = pd.DataFrame({'x': X[feature], 'y': y[feature]})
 
     # visualize
-    opts_scatter = dict(jitter=0.2) 
-    opts_shaded = dict(axiswise=True, cmap=bp.Blues[256][::-1][64:], cnorm='eq_hist', padding=0.1)
-    opts_curve = dict(axiswise=True, line_dash='dashed', color='black')
-    overlay_opts = dict(axiswise=True)
-
-    scatter = hv.Scatter(df_scatter).opts(**opts_scatter)
-    shaded = spread(rasterize(scatter), px=4, shape='circle').opts(**opts_shaded)
-    curve = hv.Curve([[0,np.min(y[feature])], [0,np.max(y[feature])]]).opts(**opts_curve)
-
-    return (shaded * curve).opts(**overlay_opts)
-
+    hex = hv.HexTiles(df_hex)
+    
+    return hex.opts(
+        opts.HexTiles(min_count=0, width=300, height=300, axiswise=True),
+    )
 
 def get_shapgrid(explainer, dict_files):
     explanations = explainer.explain_global(dict_files['X_test'])
