@@ -15,7 +15,8 @@ def main(ctx):
         'type': models[i].tags['type'] if 'type' in models[i].tags else 'Unknown', 
         'primary_metric': models[i].tags['primary_metric'] if 'primary_metric' in models[i].tags else 'Unknown', 
         'score': models[i].tags['best_score'] if 'best_score' in models[i].tags else 'Unknown',
-        'label': models[i].tags['label'] if 'label' in models[i].tags else 'Unknown'
+        'label': models[i].tags['label'] if 'label' in models[i].tags else 'Unknown',
+        'source': models[i].tags['source'] if 'source' in models[i].tags else 'Unknown'
     } for i,m in enumerate(models)]
 
     with open('outputs/models.json', 'w') as f:

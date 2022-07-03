@@ -131,3 +131,5 @@ dmypy.json
 # data
 **/*.pkl
 
+src/pipeline/dashboard/data/model.pkl
+src/pipeline/dashboard/data/datasets.pkl
