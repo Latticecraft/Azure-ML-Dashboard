@@ -45,8 +45,8 @@ ws = Workspace(subscription_id='83b4b5c6-51ae-4d5a-a7cf-63d20ffc2754',
                auth=auth)
 
 ds = Datastore.get(ws, 'output')
-df_runinfo = get_df(ds, 'Boston-House-Prices/runinfo')
-df_trainlog = get_df(ds, 'Boston-House-Prices/trainlog')
+df_runinfo = get_df(ds, 'Bank-Campaign/runinfo')
+df_trainlog = get_df(ds, 'Bank-Campaign/trainlog')
 
 # theme
 cmap_greens = bp.Greens[256][::-1][64:]
@@ -71,14 +71,16 @@ if len(df_trainlog) > 0:
     Use this function as a test harness to develop and test visualization code
     to be included in the HTML5 dashboard 
 '''
+from holoviews import dim, opts
 
 
 def get_viz():
     '''
         Begin visualization code
     '''
-    viz = get_density_plots(None, dict_files['X_train'], df_trainlog)
-    return viz
+    
+
+    
     
 
     '''

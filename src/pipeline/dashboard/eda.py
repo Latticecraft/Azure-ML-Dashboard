@@ -9,8 +9,7 @@ import mlflow
 
 from azureml.core import Run
 from distutils.dir_util import copy_tree
-from holoviews import opts
-from holoviews.operation import gridmatrix
+from holoviews import dim, opts
 from pathlib import Path
 
 
@@ -75,18 +74,16 @@ def get_dtypes(ctx, df):
     return bars_dtypes
 
 
-def get_density_plots(ctx, df, df_trainlog):
-    p = re.compile('feature_rank_([0-2])$')    
+def get_bivariate(ctx, df, df_trainlog):
+    p = re.compile('feature_rank_([0-2])$')
     features = df_trainlog.filter(regex=p, axis=1).iloc[0]
 
     # visual elements
-    features_ds = hv.Dataset(df[features])
-    density_grid = gridmatrix(features_ds, diagonal_type=hv.Distribution, chart_type=hv.HexTiles)
+    dict_grid = {f'{f1} x {f2}': hv.HexTiles((df[f1], df[f2])).opts(xlabel=f1, ylabel=f2) for (i,f1) in enumerate(features) for (j,f2) in enumerate(features) if i < j}
+    grid = hv.NdLayout(dict_grid).cols(3)
 
-    return density_grid.opts(
-        opts.GridMatrix(plot_size=(250,250)),
-        opts.HexTiles(min_count=0, xaxis='bottom', yaxis='bare'),
-        opts.Distribution(xaxis='bottom', yaxis='bare')
+    return grid.opts(
+        opts.HexTiles(title='', scale=(dim('Count').norm()*0.5)+0.3, min_count=0, colorbar=False, padding=0.2, axiswise=True, framewise=True, shared_axes=False)
     )
 
 
@@ -117,10 +114,10 @@ def main(ctx):
     dict_files = pd.read_pickle('data/datasets.pkl')
 
     viz_dtypes = get_dtypes(ctx, df_runinfo)
-    viz_corr = get_density_plots(ctx, dict_files['X_train'], df_trainlog)
+    viz_biv = get_bivariate(ctx, dict_files['X_train'], df_trainlog)
 
     hv.save(viz_dtypes, f'outputs/dtypes.html')
-    hv.save(viz_corr, f'outputs/corr.html')
+    hv.save(viz_biv, f'outputs/hextiles_top3.html')
 
     if ctx['type'] != 'Regression':
         viz_samples = get_samples_table(ctx, df_runinfo)
