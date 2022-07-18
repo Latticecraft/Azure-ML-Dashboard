@@ -37,16 +37,25 @@ def get_df(ds, path):
 
 
 # connect to workspace
+'''
 auth = InteractiveLoginAuthentication(tenant_id='9c8b18d3-0d09-4525-a546-341d38f12190')
 
 ws = Workspace(subscription_id='83b4b5c6-51ae-4d5a-a7cf-63d20ffc2754',
                resource_group='MLproduct23',
                workspace_name='ltcml23',
                auth=auth)
+'''
+
+auth = InteractiveLoginAuthentication(tenant_id='839a5dd3-4df0-43b2-a507-3c1808d97dee')
+
+ws = Workspace(subscription_id='8ea78212-550b-4294-97b7-1e432540fe46',
+               resource_group='ML4',
+               workspace_name='ltcftmlprd4',
+               auth=auth)
 
 ds = Datastore.get(ws, 'output')
-df_runinfo = get_df(ds, 'Bank-Campaign/runinfo')
-df_trainlog = get_df(ds, 'Bank-Campaign/trainlog')
+df_runinfo = get_df(ds, 'Boston-House-Prices/runinfo')
+df_trainlog = get_df(ds, 'Boston-House-Prices/trainlog')
 
 # theme
 cmap_greens = bp.Greens[256][::-1][64:]
@@ -74,20 +83,23 @@ if len(df_trainlog) > 0:
 from holoviews import dim, opts
 
 
-def get_viz():
-    '''
-        Begin visualization code
-    '''
-    
+def get_sweep_by(ctx, df_trainlog, key):
+    df_trainlog = df_trainlog[df_trainlog[f'num_{key}'] > 1]
+    if len(df_trainlog) > 0:
+        df = pd.DataFrame({
+            key: eval(str.encode(df_trainlog.iloc[0][f'sweep_{key}'])),
+            'primary_metric': eval(str.encode(df_trainlog.iloc[0]['sweep_primary_metric']))
+        })
+        
+        opts = dict(width=450, height=450)
+        sc = hv.Scatter(df, [key], 'primary_metric').options(**opts)
+        bw = hv.BoxWhisker(df, [key], 'primary_metric').options(**opts)
+        return bw * sc
+    else:
+        opts = dict(width=450, height=450)
+        return hv.Text(0.5, 0.5, 'No sweep jobs found').opts(**opts)
 
-    
-    
-
-    '''
-        End visualization code
-    '''
-
-viz = get_viz()
+viz = get_sweep_by(None, df_trainlog, 'balancer')
 viz
 
 # %%

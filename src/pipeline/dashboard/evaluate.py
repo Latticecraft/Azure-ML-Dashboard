@@ -147,16 +147,20 @@ def get_roc(ctx, model, dict_files):
 
 
 def get_sweep_by(ctx, df_trainlog, key):
-    df = pd.DataFrame({
-        'balancer': eval(str.encode(df_trainlog.iloc[0]['sweep_balancer'])),
-        'imputer': eval(str.encode(df_trainlog.iloc[0]['sweep_imputer'])),
-        'primary_metric': eval(str.encode(df_trainlog.iloc[0]['sweep_primary_metric']))
-    })
-    
-    opts = dict(width=450, height=450)
-    sc = hv.Scatter(df, [key], 'primary_metric').options(**opts)
-    bw = hv.BoxWhisker(df, [key], 'primary_metric').options(**opts)
-    return bw * sc
+    df_trainlog = df_trainlog[df_trainlog[f'num_{key}'] > 1]
+    if len(df_trainlog) > 0:
+        df = pd.DataFrame({
+            key: eval(str.encode(df_trainlog.iloc[0][f'sweep_{key}'])),
+            'primary_metric': eval(str.encode(df_trainlog.iloc[0]['sweep_primary_metric']))
+        })
+        
+        opts = dict(width=450, height=450)
+        sc = hv.Scatter(df, [key], 'primary_metric').options(**opts)
+        bw = hv.BoxWhisker(df, [key], 'primary_metric').options(**opts)
+        return bw * sc
+    else:
+        opts = dict(width=450, height=450)
+        return hv.Text(0.5, 0.5, 'No sweep jobs found').opts(**opts)
 
 
 def get_df(path):
