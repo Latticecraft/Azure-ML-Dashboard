@@ -90,16 +90,16 @@ def get_sweep_by(ctx, df_trainlog, key):
             key: eval(str.encode(df_trainlog.iloc[0][f'sweep_{key}'])),
             'primary_metric': eval(str.encode(df_trainlog.iloc[0]['sweep_primary_metric']))
         })
-        
-        opts = dict(width=450, height=450)
-        sc = hv.Scatter(df, [key], 'primary_metric').options(**opts)
-        bw = hv.BoxWhisker(df, [key], 'primary_metric').options(**opts)
-        return bw * sc
+
+        opts = dict(width=450, height=450, axiswise=True, show_legend=False)
+        sc = hv.Scatter(df, key, 'primary_metric').options(**opts, jitter=0.5, size=5)
+        bw = hv.BoxWhisker(df, key, 'primary_metric').options(**opts, box_fill_color='white')
+        return (bw * sc).relabel(f'Generated {datetime.now().strftime("%c")}').opts(fontsize={'title': 10})
     else:
         opts = dict(width=450, height=450)
         return hv.Text(0.5, 0.5, 'No sweep jobs found').opts(**opts)
 
-viz = get_sweep_by(None, df_trainlog, 'balancer')
+viz = get_sweep_by(None, df_trainlog, 'imputer')
 viz
 
 # %%

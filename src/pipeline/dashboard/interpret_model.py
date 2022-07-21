@@ -11,7 +11,7 @@ import mlflow
 from azureml.core import Run
 from datetime import timedelta
 from distutils.dir_util import copy_tree
-from holoviews import opts
+from holoviews import dim, opts
 from interpret.ext.blackbox import TabularExplainer
 from pathlib import Path
 
@@ -59,7 +59,7 @@ def get_shap(explainer, dict_files, feature):
     hex = hv.HexTiles(df_hex)
     
     return hex.opts(
-        opts.HexTiles(min_count=0, width=300, height=300, axiswise=True),
+        opts.HexTiles(min_count=0, width=300, height=300, scale=(dim('Count').norm()*0.5)+0.3, colorbar=False, padding=0.2, axiswise=True, framewise=True, shared_axes=False),
     )
 
 def get_shapgrid(explainer, dict_files):
