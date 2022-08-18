@@ -1,5 +1,6 @@
 #%%
-import os, argparse
+import sys, os, argparse
+import json
 import joblib
 import pandas as pd
 import holoviews as hv
@@ -14,6 +15,10 @@ from holoviews import dim, opts
 from pathlib import Path
 from sklearn.metrics import auc, confusion_matrix, classification_report, roc_curve, brier_score_loss, explained_variance_score, mean_absolute_error, mean_squared_error, r2_score, mean_absolute_percentage_error
 from sklearn.calibration import calibration_curve
+
+dir_path = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(dir_path)
+from lazy_eval import LazyEval
 
 
 hv.extension('bokeh')
@@ -185,14 +190,34 @@ def main(ctx):
     run = Run.get(workspace=ctx['run'].experiment.workspace, run_id=runId)
     run.download_file('outputs/model.pkl', output_file_path='data/model.pkl')
     run.download_file('outputs/datasets.pkl', output_file_path='data/datasets.pkl')
+    run.download_file('outputs/best_run.json', output_file_path='data/best_run.json')
+
+    with open('data/best_run.json', 'r') as f:
+        best_run = json.load(f)
+        imputer = best_run['imputer']
+        balancer = best_run['balancer']
 
     model = joblib.load('data/model.pkl')
     dict_files = pd.read_pickle('data/datasets.pkl')
+    data = LazyEval(dict_files)
+
+    X_train, y_train = data.get('train', imputer, balancer)
+    X_valid, y_valid = data.get('valid', imputer, balancer)
+    X_test, y_test = data.get('test', imputer, balancer)
+
+    dict_new = {
+        'X_train': X_train,
+        'y_train': y_train,
+        'X_valid': X_valid,
+        'y_valid': y_valid,
+        'X_test': X_test,
+        'y_test': y_test
+    }
 
     if ctx['type'] != 'Regression':
-        viz_confmatrix = get_confusion_matrix(ctx, model, dict_files, ctx['label'])
-        viz_reliability = get_reliability_curve(ctx, model, dict_files)
-        viz_roc = get_roc(ctx, model, dict_files)
+        viz_confmatrix = get_confusion_matrix(ctx, model, dict_new, ctx['label'])
+        viz_reliability = get_reliability_curve(ctx, model, dict_new)
+        viz_roc = get_roc(ctx, model, dict_new)
         roc_reliability = viz_roc + viz_reliability
 
         hv.save(viz_confmatrix, f'outputs/confmatrix.html')
@@ -201,7 +226,7 @@ def main(ctx):
         hv.save(roc_reliability, f'outputs/roc_reliability.html')
 
     else:
-        viz_residuals = get_residuals_plot(ctx, model, dict_files)
+        viz_residuals = get_residuals_plot(ctx, model, dict_new)
 
         hv.save(viz_residuals, f'outputs/residuals.html')
 

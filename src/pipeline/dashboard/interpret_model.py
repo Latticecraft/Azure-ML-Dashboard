@@ -1,6 +1,7 @@
-import os, argparse
+import sys, os, argparse
 import re
 import joblib
+import json
 import numpy as np
 import pandas as pd
 import holoviews as hv
@@ -15,14 +16,18 @@ from holoviews import dim, opts
 from interpret.ext.blackbox import TabularExplainer
 from pathlib import Path
 
+dir_path = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(dir_path)
+from lazy_eval import LazyEval
+
 
 hv.extension('bokeh')
 pn.extension()
 
 
-def get_shap(explainer, dict_files, feature):
+def get_shap(explainer, files, feature):
     # get metrics
-    explanations = explainer.explain_local(dict_files['X_test'])
+    explanations = explainer.explain_local(files['X_test'])
     ranked_names = explanations.get_ranked_local_names()
     ranked_vals = explanations.get_ranked_local_values()
 
@@ -50,7 +55,7 @@ def get_shap(explainer, dict_files, feature):
     }
 
     y = {
-        feature: [x for x in dict_files['X_test'][feature]]
+        feature: [x for x in files['X_test'][feature]]
     }
 
     df_hex = pd.DataFrame({'x': X[feature], 'y': y[feature]})
@@ -62,12 +67,12 @@ def get_shap(explainer, dict_files, feature):
         opts.HexTiles(min_count=0, width=300, height=300, scale=(dim('Count').norm()*0.5)+0.3, colorbar=False, padding=0.2, axiswise=True, framewise=True, shared_axes=False),
     )
 
-def get_shapgrid(explainer, dict_files):
-    explanations = explainer.explain_global(dict_files['X_test'])
+def get_shapgrid(explainer, files):
+    explanations = explainer.explain_global(files['X_test'])
     dict_fi = explanations.get_feature_importance_dict()
     top_features = list(pd.DataFrame(dict_fi, index=[1]).T.head(9).index)
 
-    dict_grid = {f:get_shap(explainer, dict_files, f) for (i,f) in enumerate(top_features)}
+    dict_grid = {f:get_shap(explainer, files, f) for (i,f) in enumerate(top_features)}
     grid = hv.NdLayout(dict_grid).cols(3)
     return grid
 
@@ -129,13 +134,33 @@ def main(ctx):
     run = Run.get(workspace=ctx['run'].experiment.workspace, run_id=runId)
     run.download_file('outputs/model.pkl', output_file_path='data/model.pkl')
     run.download_file('outputs/datasets.pkl', output_file_path='data/datasets.pkl')
+    run.download_file('outputs/best_run.json', output_file_path='data/best_run.json')
+
+    with open('data/best_run.json', 'r') as f:
+        best_run = json.load(f)
+        imputer = best_run['imputer']
+        balancer = best_run['balancer']
 
     model = joblib.load('data/model.pkl')
     dict_files = pd.read_pickle('data/datasets.pkl')
+    data = LazyEval(dict_files)
 
-    explainer = TabularExplainer(model, dict_files['X_train'])
+    X_train, y_train = data.get('train', imputer, balancer)
+    X_valid, y_valid = data.get('valid', imputer, balancer)
+    X_test, y_test = data.get('test', imputer, balancer)
 
-    viz_shap = get_shapgrid(explainer, dict_files)
+    dict_new = {
+        'X_train': X_train,
+        'y_train': y_train,
+        'X_valid': X_valid,
+        'y_valid': y_valid,
+        'X_test': X_test,
+        'y_test': y_test
+    }
+
+    explainer = TabularExplainer(model, dict_new['X_train'])
+
+    viz_shap = get_shapgrid(explainer, dict_new)
     viz_feature = get_feature_importances(df_trainlog)
 
     hv.save(viz_shap, f'outputs/shap.html')

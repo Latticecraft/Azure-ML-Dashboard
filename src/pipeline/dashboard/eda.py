@@ -1,5 +1,6 @@
-import os, argparse
+import sys, os, argparse
 import re
+import json
 import joblib
 import pandas as pd
 import holoviews as hv
@@ -11,6 +12,10 @@ from azureml.core import Run
 from distutils.dir_util import copy_tree
 from holoviews import dim, opts
 from pathlib import Path
+
+dir_path = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(dir_path)
+from lazy_eval import LazyEval
 
 
 hv.extension('bokeh')
@@ -109,12 +114,32 @@ def main(ctx):
     run = Run.get(workspace=ctx['run'].experiment.workspace, run_id=runId)
     run.download_file('outputs/model.pkl', output_file_path='data/model.pkl')
     run.download_file('outputs/datasets.pkl', output_file_path='data/datasets.pkl')
+    run.download_file('outputs/best_run.json', output_file_path='data/best_run.json')
+
+    with open('data/best_run.json', 'r') as f:
+        best_run = json.load(f)
+        imputer = best_run['imputer']
+        balancer = best_run['balancer']
 
     model = joblib.load('data/model.pkl')
     dict_files = pd.read_pickle('data/datasets.pkl')
+    data = LazyEval(dict_files)
+
+    X_train, y_train = data.get('train', imputer, balancer)
+    X_valid, y_valid = data.get('valid', imputer, balancer)
+    X_test, y_test = data.get('test', imputer, balancer)
+
+    dict_new = {
+        'X_train': X_train,
+        'y_train': y_train,
+        'X_valid': X_valid,
+        'y_valid': y_valid,
+        'X_test': X_test,
+        'y_test': y_test
+    }
 
     viz_dtypes = get_dtypes(ctx, df_runinfo)
-    viz_biv = get_bivariate(ctx, dict_files['X_train'], df_trainlog)
+    viz_biv = get_bivariate(ctx, X_train, df_trainlog)
 
     hv.save(viz_dtypes, f'outputs/dtypes.html')
     hv.save(viz_biv, f'outputs/hextiles_top3.html')
@@ -127,7 +152,7 @@ def main(ctx):
         hv.save(viz_samples_dtypes, f'outputs/samples_dtypes.html')
 
     else:
-        viz_label_dist = get_label_distributions(ctx, dict_files)
+        viz_label_dist = get_label_distributions(ctx, dict_new)
         viz_label_distributions_dtypes = viz_label_dist + viz_dtypes
 
         hv.save(viz_label_dist, f'outputs/label_distributions.html')

@@ -7,7 +7,6 @@ import holoviews as hv
 import panel as pn
 import bokeh.palettes as bp
 import glob
-import shutil
 import mlflow
 
 from azureml.core import Run
