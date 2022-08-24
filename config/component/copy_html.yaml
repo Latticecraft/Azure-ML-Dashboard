@@ -14,7 +14,7 @@ command: >-
   --input5 ${{inputs.input5}}
   --html ${{outputs.html}}
 code: ../../src/pipeline/dashboard
-environment: azureml:ltcftenv@latest
+environment: azureml:ltcfthvenv@latest
 inputs:
   models:
     type: path
