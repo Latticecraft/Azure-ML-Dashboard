@@ -4,12 +4,11 @@ import json
 import joblib
 import pandas as pd
 import holoviews as hv
-import panel as pn
 import glob
 import mlflow
 
 from azureml.core import Run
-from datetime import datetime
+from bokeh.io import export_png
 from distutils.dir_util import copy_tree
 from holoviews import dim, opts
 from pathlib import Path
@@ -18,11 +17,11 @@ from sklearn.calibration import calibration_curve
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(dir_path)
-from lazy_eval import LazyEval
+from lazy_eval import LazyEval, get_theme, get_webdriver
 
 
 hv.extension('bokeh')
-pn.extension()
+hv.renderer('bokeh').theme = get_theme()
 
 
 def get_residuals_plot(ctx, model, dict_files):
@@ -163,7 +162,7 @@ def get_sweep_by(ctx, df_trainlog, key):
         opts = dict(width=450, height=450, axiswise=True, show_legend=False)
         sc = hv.Scatter(df, key, 'primary_metric').options(**opts, jitter=0.5, size=5)
         bw = hv.BoxWhisker(df, key, 'primary_metric').options(**opts, box_fill_color='white')
-        return (bw * sc).relabel(f'Generated {datetime.now().strftime("%c")}').opts(fontsize={'title': 10})
+        return (bw * sc)
     else:
         opts = dict(width=450, height=450)
         return hv.Text(0.5, 0.5, 'No sweep jobs found').opts(**opts)
@@ -214,6 +213,8 @@ def main(ctx):
         'y_test': y_test
     }
 
+    webdriver = get_webdriver()
+
     if ctx['type'] != 'Regression':
         viz_confmatrix = get_confusion_matrix(ctx, model, dict_new, ctx['label'])
         viz_reliability = get_reliability_curve(ctx, model, dict_new)
@@ -221,19 +222,28 @@ def main(ctx):
         roc_reliability = viz_roc + viz_reliability
 
         hv.save(viz_confmatrix, f'outputs/confmatrix.html')
+        export_png(hv.render(viz_confmatrix), filename= 'outputs/confmatrix.png', webdriver=webdriver)
+
         hv.save(viz_reliability, f'outputs/reliability.html')
+        export_png(hv.render(viz_reliability), filename= 'outputs/reliability.png', webdriver=webdriver)
+
         hv.save(viz_roc, f'outputs/roc.html')
+        export_png(hv.render(viz_roc), filename= 'outputs/roc.png', webdriver=webdriver)
+
         hv.save(roc_reliability, f'outputs/roc_reliability.html')
+        export_png(hv.render(roc_reliability), filename= 'outputs/roc_reliability.png', webdriver=webdriver)
 
     else:
         viz_residuals = get_residuals_plot(ctx, model, dict_new)
 
         hv.save(viz_residuals, f'outputs/residuals.html')
+        export_png(hv.render(viz_residuals), filename= 'outputs/residuals.png', webdriver=webdriver)
 
     viz_sweep = get_sweep_by(ctx, df_trainlog, 'balancer') + \
                 get_sweep_by(ctx, df_trainlog, 'imputer')
 
     hv.save(viz_sweep, f'outputs/sweep.html')
+    export_png(hv.render(viz_sweep), filename= 'outputs/sweep.png', webdriver=webdriver)
 
     copy_tree('outputs', args.transformed_data)
 

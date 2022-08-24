@@ -1,23 +1,24 @@
 #%%
-import os, argparse
+import sys, os, argparse
 import re
 import numpy as np
 import pandas as pd
 import holoviews as hv
-import panel as pn
-import bokeh.palettes as bp
 import glob
-import shutil
 import mlflow
 
 from azureml.core import Run
+from bokeh.io import export_png
 from distutils.dir_util import copy_tree
 from datetime import datetime, timedelta
 from pathlib import Path
 
+dir_path = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(dir_path)
+from lazy_eval import LazyEval, get_theme, get_webdriver
 
 hv.extension('bokeh')
-pn.extension()
+hv.renderer('bokeh').theme = get_theme()
 
 
 def get_run_history(df_runinfo, df_trainlog):
@@ -82,12 +83,17 @@ def main(ctx):
     df_runinfo = get_df(ctx['args'].runinfo)
     df_trainlog = get_df(ctx['args'].trainlog)
 
+    webdriver = get_webdriver()
+
     viz_runhistory = get_run_history(df_runinfo, df_trainlog)
     viz_time = get_time_profile(df_runinfo)
 
-    os.makedirs("outputs", exist_ok=True)
     hv.save(viz_runhistory, f'outputs/runhistory.html')
+    export_png(hv.render(viz_runhistory), filename= 'outputs/runhistory.png', webdriver=webdriver)
+
     hv.save(viz_time, f'outputs/profile.html')
+    export_png(hv.render(viz_time), filename= 'outputs/profile.png', webdriver=webdriver)
+
     copy_tree('outputs', args.transformed_data)
 
 

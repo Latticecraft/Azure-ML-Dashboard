@@ -5,11 +5,11 @@ import json
 import numpy as np
 import pandas as pd
 import holoviews as hv
-import panel as pn
 import glob
 import mlflow
 
 from azureml.core import Run
+from bokeh.io import export_png
 from datetime import timedelta
 from distutils.dir_util import copy_tree
 from holoviews import dim, opts
@@ -18,11 +18,11 @@ from pathlib import Path
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(dir_path)
-from lazy_eval import LazyEval
+from lazy_eval import LazyEval, get_theme, get_webdriver
 
 
 hv.extension('bokeh')
-pn.extension()
+hv.renderer('bokeh').theme = get_theme()
 
 
 def get_shap(explainer, files, feature):
@@ -160,11 +160,17 @@ def main(ctx):
 
     explainer = TabularExplainer(model, dict_new['X_train'])
 
+    webdriver = get_webdriver()
+
     viz_shap = get_shapgrid(explainer, dict_new)
     viz_feature = get_feature_importances(df_trainlog)
 
     hv.save(viz_shap, f'outputs/shap.html')
+    export_png(hv.render(viz_shap), filename= 'outputs/shap.png', webdriver=webdriver)
+
     hv.save(viz_feature, f'outputs/features.html')
+    export_png(hv.render(viz_feature), filename= 'outputs/features.png', webdriver=webdriver)
+
     copy_tree('outputs', args.transformed_data)
 
 

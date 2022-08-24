@@ -1,5 +1,5 @@
 #%%
-import os, argparse
+import sys, os, argparse
 import re
 import numpy as np
 import pandas as pd
@@ -10,13 +10,18 @@ import glob
 import mlflow
 
 from azureml.core import Run
+from bokeh.io import export_png
 from datetime import datetime, timedelta
 from distutils.dir_util import copy_tree
 from pathlib import Path
 
+dir_path = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(dir_path)
+from lazy_eval import LazyEval, get_theme, get_webdriver
+
 
 hv.extension('bokeh')
-pn.extension()
+hv.renderer('bokeh').theme = get_theme()
 
 
 def get_datadrift(ctx, df):
@@ -100,11 +105,17 @@ def main(ctx):
     df_runinfo = get_df(ctx['args'].runinfo)
     df_trainlog = get_df(ctx['args'].trainlog)
 
+    webdriver = get_webdriver()
+
     viz_datadrift = get_datadrift(ctx, df_runinfo)
     viz_modeldrift = get_modeldrift(ctx, df_trainlog)
 
     hv.save(viz_datadrift, f'outputs/datadrift.html')
+    export_png(hv.render(viz_datadrift), filename= 'outputs/datadrift.png', webdriver=webdriver)
+
     hv.save(viz_modeldrift, f'outputs/modeldrift.html')
+    export_png(hv.render(viz_modeldrift), filename= 'outputs/modeldrift.png', webdriver=webdriver)
+
     copy_tree('outputs', args.transformed_data)
 
 

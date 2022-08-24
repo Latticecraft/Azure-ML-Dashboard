@@ -4,22 +4,26 @@ import json
 import joblib
 import pandas as pd
 import holoviews as hv
-import panel as pn
 import glob
 import mlflow
 
 from azureml.core import Run
+from bokeh.io import export_png
 from distutils.dir_util import copy_tree
 from holoviews import dim, opts
 from pathlib import Path
 
+from bokeh.io import export_png
+
+
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(dir_path)
-from lazy_eval import LazyEval
+sys.path.append('/opt/google/chrome')
+from lazy_eval import LazyEval, get_theme, get_webdriver
 
 
 hv.extension('bokeh')
-pn.extension()
+hv.renderer('bokeh').theme = get_theme()
 
 
 def get_samples_table(ctx, df_runinfo):
@@ -138,26 +142,38 @@ def main(ctx):
         'y_test': y_test
     }
 
+    webdriver = get_webdriver()
+
     viz_dtypes = get_dtypes(ctx, df_runinfo)
     viz_biv = get_bivariate(ctx, X_train, df_trainlog)
 
     hv.save(viz_dtypes, f'outputs/dtypes.html')
-    hv.save(viz_biv, f'outputs/hextiles_top3.html')
+    export_png(hv.render(viz_dtypes), filename= 'outputs/dtypes.png', webdriver=webdriver)
 
+    hv.save(viz_biv, f'outputs/hextiles_top3.html')
+    export_png(hv.render(viz_biv), filename= 'outputs/hextiles_top3.png', webdriver=webdriver)    
+    
     if ctx['type'] != 'Regression':
         viz_samples = get_samples_table(ctx, df_runinfo)
         viz_samples_dtypes = viz_samples + viz_dtypes
 
         hv.save(viz_samples, f'outputs/samples.html')
+        export_png(hv.render(viz_samples), filename= 'outputs/samples.png', webdriver=webdriver)  
+
         hv.save(viz_samples_dtypes, f'outputs/samples_dtypes.html')
+        export_png(hv.render(viz_samples_dtypes), filename= 'outputs/samples_dtypes.png', webdriver=webdriver)  
+
 
     else:
         viz_label_dist = get_label_distributions(ctx, dict_new)
         viz_label_distributions_dtypes = viz_label_dist + viz_dtypes
 
         hv.save(viz_label_dist, f'outputs/label_distributions.html')
+        export_png(hv.render(viz_label_dist), filename= 'outputs/label_distributions.png', webdriver=webdriver)
+
         hv.save(viz_label_distributions_dtypes, f'outputs/label_distributions_dtypes.html')
-    
+        export_png(hv.render(viz_label_distributions_dtypes), filename= 'outputs/label_distributions_dtypes.png', webdriver=webdriver)
+
     copy_tree('outputs', args.transformed_data)
 
 
