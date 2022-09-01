@@ -19,7 +19,7 @@ from bokeh.io import export_png
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(dir_path)
 sys.path.append('/opt/google/chrome')
-from lazy_eval import LazyEval, get_theme, get_webdriver
+from common import LazyEval, get_theme, get_webdriver
 
 
 hv.extension('bokeh')
