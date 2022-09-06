@@ -58,8 +58,8 @@ def get_datadrift(ctx, df):
 
     opts = dict(width=900, height=500)
     ds = hv.Dataset(df, kdims=['feature'], vdims=['value','alpha','marker','size','color'])
-    sc = hv.Scatter(ds).options(**opts)
-    bw = hv.BoxWhisker(ds, ['feature'], 'value').options(**opts)
+    sc = hv.Scatter(ds).options(**opts, jitter=0.5, size=5)
+    bw = hv.BoxWhisker(ds, ['feature'], 'value').options(**opts, box_fill_color='white')
 
     return bw[largest_divergences] * sc[largest_divergences]
 

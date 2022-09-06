@@ -159,7 +159,7 @@ def get_sweep_by(ctx, df_trainlog, key):
             'primary_metric': eval(str.encode(df_trainlog.iloc[0]['sweep_primary_metric']))
         })
 
-        opts = dict(width=450, height=450, axiswise=True, show_legend=False)
+        opts = dict(width=450, height=450, axiswise=True, show_legend=False, xrotation=45)
         sc = hv.Scatter(df, key, 'primary_metric').options(**opts, jitter=0.5, size=5)
         bw = hv.BoxWhisker(df, key, 'primary_metric').options(**opts, box_fill_color='white')
         return (bw * sc)
