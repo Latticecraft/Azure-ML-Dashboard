@@ -1,8 +1,0 @@
-{
-    "azureFunctions.projectSubpath": "src/functionapp",
-    "azureFunctions.deploySubpath": "src/functionapp/bin/output",
-    "azureFunctions.projectLanguage": "C#",
-    "azureFunctions.projectRuntime": "~4",
-    "debug.internalConsoleOptions": "neverOpen",
-    "azureFunctions.preDeployTask": "publish (functions)"
-}
