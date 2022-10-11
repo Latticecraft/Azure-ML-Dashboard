@@ -1,11 +1,7 @@
 #%%
-import sys, os, argparse
-import json
-import joblib
+import argparse, joblib, json, mlflow, os, sys 
 import pandas as pd
 import holoviews as hv
-import glob
-import mlflow
 
 from azureml.core import Run
 from bokeh.io import export_png
@@ -17,11 +13,9 @@ from sklearn.calibration import calibration_curve
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(dir_path)
-from common import LazyEval, get_theme, get_webdriver
-
+from common import LazyEval, get_df, get_webdriver
 
 hv.extension('bokeh')
-hv.renderer('bokeh').theme = get_theme()
 
 
 def get_residuals_plot(ctx, model, dict_files):
@@ -35,21 +29,21 @@ def get_residuals_plot(ctx, model, dict_files):
     mape = mean_absolute_percentage_error(dict_files['y_test'], yhat)
 
     # visualize
-    opts_dist = dict(width=450, height=450)
-    opts_metrics = dict(width=450, height=450, xlim=(0,1), ylim=(0,1), xaxis='bare', yaxis='bare')
+    opts_dist = dict(width=700, height=450)
+    opts_metrics = dict(width=200, height=450, xlim=(0,1), ylim=(0,1), xaxis='bare', yaxis='bare')
 
     dist = hv.Distribution(residuals).opts(**opts_dist)
 
-    metrics = (hv.Text(0.3,0.9,'Explained Variance') *
-        hv.Text(0.3,0.85,str(round(explained_variance, 3))) *
-        hv.Text(0.3,0.7,'MAE') *
-        hv.Text(0.3,0.65,str(round(mae, 3))) *
-        hv.Text(0.3,0.5,'RMSE') *
-        hv.Text(0.3,0.45,str(round(rmse, 3))) *
-        hv.Text(0.3,0.3,'R^2') *
-        hv.Text(0.3,0.25,str(round(r2, 3))) *
-        hv.Text(0.3,0.1,'MAPE') *
-        hv.Text(0.3,0.05,str(round(mape, 3)))).opts(**opts_metrics)
+    metrics = (hv.Text(0.5,0.9,'Explained Variance') *
+        hv.Text(0.5,0.85,str(round(explained_variance, 3))) *
+        hv.Text(0.5,0.7,'MAE') *
+        hv.Text(0.5,0.65,str(round(mae, 3))) *
+        hv.Text(0.5,0.5,'RMSE') *
+        hv.Text(0.5,0.45,str(round(rmse, 3))) *
+        hv.Text(0.5,0.3,'R^2') *
+        hv.Text(0.5,0.25,str(round(r2, 3))) *
+        hv.Text(0.5,0.1,'MAPE') *
+        hv.Text(0.5,0.05,str(round(mape, 3)))).opts(**opts_metrics)
         
     overlay = dist + metrics
 
@@ -166,18 +160,6 @@ def get_sweep_by(ctx, df_trainlog, key):
     else:
         opts = dict(width=450, height=450)
         return hv.Text(0.5, 0.5, 'No sweep jobs found').opts(**opts)
-
-
-def get_df(path):
-    df_all = pd.DataFrame()
-    deltas = glob.glob(path+"/*")
-    for d in deltas:
-        print('adding {}'.format(d))
-        df_delta = pd.read_csv((Path(path) / d), parse_dates=['runDate'])
-        df_all = pd.concat([df_all, df_delta], ignore_index=True)
-
-    df_all['runDate'] = pd.to_datetime(df_all['runDate'])
-    return df_all.sort_values('runDate', ascending=False)
 
 
 # define functions 

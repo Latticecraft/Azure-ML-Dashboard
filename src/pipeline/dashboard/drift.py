@@ -1,27 +1,19 @@
 #%%
-import sys, os, argparse
-import re
+import argparse, mlflow, os, re, sys 
 import numpy as np
 import pandas as pd
 import holoviews as hv
-import panel as pn
-import bokeh.palettes as bp
-import glob
-import mlflow
 
 from azureml.core import Run
 from bokeh.io import export_png
 from datetime import datetime, timedelta
 from distutils.dir_util import copy_tree
-from pathlib import Path
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(dir_path)
-from common import LazyEval, get_theme, get_webdriver
-
+from common import LazyEval, get_df, get_webdriver
 
 hv.extension('bokeh')
-hv.renderer('bokeh').theme = get_theme()
 
 
 def get_datadrift(ctx, df):
@@ -86,18 +78,6 @@ def get_modeldrift(ctx, df):
     curve = hv.Curve(errorbars)
 
     return errorbars * overlay * curve
-
-
-def get_df(path):
-    df_all = pd.DataFrame()
-    deltas = glob.glob(path+"/*")
-    for d in deltas:
-        print('adding {}'.format(d))
-        df_delta = pd.read_csv((Path(path) / d), parse_dates=['runDate'])
-        df_all = pd.concat([df_all, df_delta], ignore_index=True)
-
-    df_all['runDate'] = pd.to_datetime(df_all['runDate'])
-    return df_all.sort_values('runDate', ascending=False)
 
 
 # define functions 

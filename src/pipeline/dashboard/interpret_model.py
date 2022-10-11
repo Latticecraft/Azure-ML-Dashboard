@@ -1,12 +1,7 @@
-import sys, os, argparse
-import re
-import joblib
-import json
+import argparse, joblib, json, mlflow, os, re, sys 
 import numpy as np
 import pandas as pd
 import holoviews as hv
-import glob
-import mlflow
 
 from azureml.core import Run
 from bokeh.io import export_png
@@ -14,15 +9,12 @@ from datetime import timedelta
 from distutils.dir_util import copy_tree
 from holoviews import dim, opts
 from interpret.ext.blackbox import TabularExplainer
-from pathlib import Path
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(dir_path)
-from common import LazyEval, get_theme, get_webdriver
-
+from common import LazyEval, get_df, get_webdriver
 
 hv.extension('bokeh')
-hv.renderer('bokeh').theme = get_theme()
 
 
 def get_shap(explainer, files, feature):
@@ -64,7 +56,7 @@ def get_shap(explainer, files, feature):
     hex = hv.HexTiles(df_hex)
     
     return hex.opts(
-        opts.HexTiles(min_count=0, width=300, height=300, scale=(dim('Count').norm()*0.5)+0.3, colorbar=False, padding=0.2, axiswise=True, framewise=True, shared_axes=False),
+        opts.HexTiles(min_count=1, width=300, height=300, scale=(dim('Count').norm()*0.5)+0.3, colorbar=False, padding=0.2, axiswise=True, framewise=True, shared_axes=False),
     )
 
 def get_shapgrid(explainer, files):
@@ -111,18 +103,6 @@ def get_feature_importances(df_trainlog):
     ).opts(yticks=yticks)
 
     return overlay
-
-
-def get_df(path):
-    df_all = pd.DataFrame()
-    deltas = glob.glob(path+"/*")
-    for d in deltas:
-        print('adding {}'.format(d))
-        df_delta = pd.read_csv((Path(path) / d), parse_dates=['runDate'])
-        df_all = pd.concat([df_all, df_delta], ignore_index=True)
-
-    df_all['runDate'] = pd.to_datetime(df_all['runDate'])
-    return df_all.sort_values('runDate', ascending=False)
 
 
 # define functions 

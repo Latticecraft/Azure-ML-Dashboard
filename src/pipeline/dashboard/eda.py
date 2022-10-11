@@ -1,29 +1,17 @@
-import sys, os, argparse
-import re
-import json
-import joblib
+import argparse, joblib, json, mlflow, os, re, sys 
 import pandas as pd
 import holoviews as hv
-import glob
-import mlflow
 
 from azureml.core import Run
 from bokeh.io import export_png
 from distutils.dir_util import copy_tree
 from holoviews import dim, opts
-from pathlib import Path
-
-from bokeh.io import export_png
-
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(dir_path)
-sys.path.append('/opt/google/chrome')
-from common import LazyEval, get_theme, get_webdriver
-
+from common import LazyEval, get_df, get_webdriver
 
 hv.extension('bokeh')
-hv.renderer('bokeh').theme = get_theme()
 
 
 def get_samples_table(ctx, df_runinfo):
@@ -92,20 +80,8 @@ def get_bivariate(ctx, df, df_trainlog):
     grid = hv.NdLayout(dict_grid).cols(3)
 
     return grid.opts(
-        opts.HexTiles(title='', scale=(dim('Count').norm()*0.5)+0.3, min_count=0, colorbar=False, padding=0.2, axiswise=True, framewise=True, shared_axes=False)
+        opts.HexTiles(title='', scale=(dim('Count').norm()*0.5)+0.3, min_count=1, colorbar=False, padding=0.2, axiswise=True, framewise=True, shared_axes=False)
     )
-
-
-def get_df(path):
-    df_all = pd.DataFrame()
-    deltas = glob.glob(path+"/*")
-    for d in deltas:
-        print('adding {}'.format(d))
-        df_delta = pd.read_csv((Path(path) / d), parse_dates=['runDate'])
-        df_all = pd.concat([df_all, df_delta], ignore_index=True)
-
-    df_all['runDate'] = pd.to_datetime(df_all['runDate'])
-    return df_all.sort_values('runDate', ascending=False)
 
 
 # define functions 

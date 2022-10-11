@@ -1,7 +1,6 @@
+import glob
 import pandas as pd
 
-from bokeh.themes.theme import Theme
-from datetime import datetime
 from pathlib import Path
 from selenium.webdriver import Chrome
 from selenium.webdriver.chrome.options import Options
@@ -25,6 +24,30 @@ class LazyEval:
         
         return df_X, df_y
 
+
+def get_df(path):
+    df_all = pd.DataFrame()
+    deltas = glob.glob(path+"/*")
+    for d in deltas:
+        print('adding {}'.format(d))
+        df_delta = pd.read_csv((Path(path) / d), parse_dates=['runDate'])
+        df_all = pd.concat([df_all, df_delta], ignore_index=True)
+
+    df_all['runDate'] = pd.to_datetime(df_all['runDate'])
+    return df_all.sort_values('runDate', ascending=False)
+
+
+def get_webdriver():
+    options = Options()
+    options.add_argument('--headless')
+    options.add_argument('--no-sandbox')
+    options.add_argument('--disable-dev-shm-usage')
+    options.binary_location = '/opt/google/chrome/chrome'
+    return Chrome(options=options,
+        executable_path=str(Path("/usr/bin/chromedriver")))
+
+
+''' -- Themes not fully supported yet for png exports
 def get_theme():
     return Theme(json={
         'attrs' : {
@@ -59,12 +82,4 @@ def get_theme():
                 'label_text_color': "black"
             }
         }})
-
-def get_webdriver():
-    options = Options()
-    options.add_argument('--headless')
-    options.add_argument('--no-sandbox')
-    options.add_argument('--disable-dev-shm-usage')
-    options.binary_location = '/opt/google/chrome/chrome'
-    return Chrome(options=options,
-        executable_path=str(Path("/usr/bin/chromedriver")))
+'''
