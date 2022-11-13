@@ -126,14 +126,11 @@ def main(ctx):
     data = LazyEval(dict_files)
 
     X_train, y_train = data.get('train', imputer, balancer)
-    X_valid, y_valid = data.get('valid', imputer, balancer)
     X_test, y_test = data.get('test', imputer, balancer)
 
     dict_new = {
         'X_train': X_train,
         'y_train': y_train,
-        'X_valid': X_valid,
-        'y_valid': y_valid,
         'X_test': X_test,
         'y_test': y_test
     }
