@@ -10,6 +10,7 @@ command: >-
   --input1 ${{inputs.input1}}
   --input2 ${{inputs.input2}}
   --input3 ${{inputs.input3}}
+  --input4 ${{inputs.input4}}
   --input5 ${{inputs.input5}}
   --html ${{outputs.html}}
 code: ../../src/pipeline/dashboard
@@ -22,6 +23,8 @@ inputs:
   input2:
     type: path
   input3:
+    type: path
+  input4:
     type: path
   input5:
     type: path

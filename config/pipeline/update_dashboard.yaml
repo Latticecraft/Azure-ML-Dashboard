@@ -54,6 +54,16 @@ jobs:
       label: ${{parent.inputs.label}}
     outputs:
       transformed_data:
+  interpret_model:
+    type: command
+    component: file:../component/interpret_model.yaml
+    inputs:
+      datasets_pkl: ${{parent.inputs.datasets_pkl}}
+      runinfo: ${{parent.inputs.runinfo}}
+      trainlog: ${{parent.inputs.trainlog}}
+      label: ${{parent.inputs.label}}
+    outputs:
+      transformed_data:
   profile:
     type: command
     component: file:../component/profile_pipelines.yaml
@@ -72,6 +82,7 @@ jobs:
       input1: ${{parent.jobs.eda.outputs.transformed_data}}
       input2: ${{parent.jobs.drift.outputs.transformed_data}}
       input3: ${{parent.jobs.evaluate.outputs.transformed_data}}
+      input4: ${{parent.jobs.interpret_model.outputs.transformed_data}}
       input5: ${{parent.jobs.profile.outputs.transformed_data}}
     outputs:
       html: ${{parent.outputs.html}}

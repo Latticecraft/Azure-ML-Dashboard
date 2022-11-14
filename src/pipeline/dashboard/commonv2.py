@@ -46,7 +46,7 @@ def context(func):
 
         kwargs['chrome'] = get_webdriver()
         kwargs['run'] = run
-        #kwargs['data'] = client.get_run(mlflow.active_run().info.run_id).data
+        kwargs['data'] = client.get_run(mlflow.active_run().info.run_id).data
         kwargs['project'] = tags['project'] if 'project' in tags.keys() else None
         kwargs['type'] = tags['type'] if 'type' in tags.keys() else None
         kwargs['label'] = tags['label'] if 'label' in tags.keys() else None
