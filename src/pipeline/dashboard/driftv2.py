@@ -7,8 +7,6 @@ import pandas as pd
 import re
 import sys
 
-from bokeh.models.formatters import DatetimeTickFormatter
-
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(dir_path)
 from commonv2 import *
@@ -21,35 +19,53 @@ def data_drift(func):
     def inner(**kwargs):
         df = kwargs['data_layer.runinfo']
 
-        runDates = df.sort_values('runDate', ascending=False)['runDate'].head(5)
+        df['runDate'] = pd.to_datetime(df['runDate'])
+        df['runDate'] = df['runDate'].dt.strftime('%Y-%m-%d')
 
-        p = re.compile('^stats\.([a-zA-Z0-9_ ]*)_mean|runDate')
+        p = re.compile('^stats\.([a-zA-Z0-9_ ]*)_mean')
 
         print(f'len df_0: {len(df)}')
 
-        df_1 = (df.set_index('runId')
-                .filter(regex=p, axis=1))
+        df_1 = (df.set_index('runDate')
+                .filter(regex=p, axis=1)
+                .groupby('runDate')
+                .mean()
+                .reset_index(drop=False)
+                .sort_values('runDate', ascending=False))
 
         print(f'len df_1: {len(df_1)}')
 
-        df_2 = (pd.DataFrame([{
-            'feature': p.match(k)[1],
-            'divergence_mrr': np.abs(v[-1]-np.mean(v[:-1])/(np.std(v[:-1]) or 1))
-        } for (k,v) in df_1[df_1['runDate'] < np.max(runDates)].drop(['runDate'], axis=1).to_dict(orient='list').items()])
-        .sort_values('divergence_mrr', ascending=False)
-        .head(5))
+        df_all = pd.DataFrame()
+        for rd in df_1['runDate'].head(np.min([len(df_1)-2, 10])):
+            df_2 = (pd.DataFrame([{
+                'feature': p.match(k)[1],
+                'divergence_mrr': np.abs(v[-1]-np.mean(v[:-1])/(np.std(v[:-1]) or 1))
+            } for (k,v) in df_1[df_1['runDate'] < rd].drop(['runDate'], axis=1).dropna(thresh=2, axis=1).to_dict(orient='list').items()])
+            .sort_values('divergence_mrr', ascending=False)
+            .assign(runDate=rd))
+            df_all = pd.concat([df_all, df_2], ignore_index=True)
 
-        print(f'len df_2: {len(df_2)}')
+        print(f'len df_all: {len(df_all)}')
 
-        opts = dict(width=900, height=500)
+        if len(np.unique(df_all['runDate'])) > 5:
+            # get top 10 divergent features
+            top_divergences = (df_all
+                .sort_values('divergence_mrr', ascending=False)
+                .drop_duplicates(subset=['feature'])
+                .head(10))['feature']
 
-        x = np.array(df_2['runDate'])
-        y = np.array(df_2['feature'])
-        v = np.array(df_2['divergence_mrr'])
-        hm = hv.HeatMap((x,y,v)).opts(**opts)
+            # filter out features not in above list
+            df_all = (df_all
+                .sort_values('runDate', ascending=False)
+                .merge(top_divergences, on='feature', how='inner'))
 
-        kwargs['plot'] = hm
-        kwargs['plot_name'] = 'datadrift'
+            x = np.array(df_all['runDate'])
+            y = np.array(df_all['feature'])
+            v = np.array(df_all['divergence_mrr'])
+            hm = hv.HeatMap((x,y,v))
+
+            kwargs['plot'] = hm
+            kwargs['plot_name'] = 'datadrift'
 
         return func(**kwargs)
 
@@ -58,11 +74,12 @@ def data_drift(func):
 
 def config(func):
     def inner(**kwargs):
+        if 'plot' in kwargs:
+            kwargs['plot'] = kwargs['plot'].opts(
+                width=900, height=500
+            )
+
         return func(**kwargs)
-        '''.opts(
-            opts.Scatter(width=900, height=500, jitter=0.5, size=5),
-            opts.BoxWhisker(width=900, height=500, box_fill_color='white', whisker_color='gray')
-        )'''
 
     return inner
 
@@ -86,8 +103,8 @@ def parse_args():
 
 #%%
 # run script
-if __name__ == "__main__":
-    os.makedirs("outputs", exist_ok=True)
+if __name__ == '__main__':
+    os.makedirs('outputs', exist_ok=True)
 
     try:
         args
@@ -98,7 +115,9 @@ if __name__ == "__main__":
         context(
             data(
                 data_drift(
-                    export
+                    config(
+                        export
+                    )
                 )
             )
         )(**{

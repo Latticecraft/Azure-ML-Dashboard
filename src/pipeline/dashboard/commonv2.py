@@ -46,7 +46,7 @@ def context(func):
 
         kwargs['chrome'] = get_webdriver()
         kwargs['run'] = run
-        kwargs['data'] = client.get_run(mlflow.active_run().info.run_id).data
+        #kwargs['data'] = client.get_run(mlflow.active_run().info.run_id).data
         kwargs['project'] = tags['project'] if 'project' in tags.keys() else None
         kwargs['type'] = tags['type'] if 'type' in tags.keys() else None
         kwargs['label'] = tags['label'] if 'label' in tags.keys() else None
@@ -121,7 +121,6 @@ def data(func):
                 'y_test': y_test
             }
 
-
         kwargs['data_layer.runinfo'] = df_runinfo
 
         return func(**kwargs)
@@ -131,12 +130,14 @@ def data(func):
 
 def export(**kwargs):
     try:
-        hv.save(kwargs['plot'], f'outputs/{kwargs["plot_name"]}.html')
-        export_png(hv.render(kwargs['plot']), filename=f'outputs/{kwargs["plot_name"]}.png', webdriver=kwargs['chrome'])
+        if 'plot' in kwargs:
+            hv.save(kwargs['plot'], f'outputs/{kwargs["plot_name"]}.html')
+            export_png(hv.render(kwargs['plot']), filename=f'outputs/{kwargs["plot_name"]}.png', webdriver=kwargs['chrome'])
+            return kwargs['plot']
     except RuntimeError:
         pass
 
-    return kwargs['plot']
+    return None
 
 
 def debug(**kwargs):
