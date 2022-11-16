@@ -7,6 +7,8 @@ import pandas as pd
 import re
 import sys
 
+from datetime import datetime, timedelta
+
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(dir_path)
 from commonv2 import *
@@ -72,6 +74,31 @@ def data_drift(func):
     return inner
 
 
+def model_drift(func):
+    def inner(**kwargs):
+        df = kwargs['data_layer.trainlog']
+
+        p = re.compile(f'({kwargs["primary_metric"]})|(runDate)')
+
+        df = (df.set_index('runId')
+                .filter(regex=p, axis=1)
+                .assign(runDate=lambda x: x['runDate'].dt.date))
+
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=14)
+
+        x = np.array(df['runDate'])
+        y = np.array(df[kwargs['primary_metric']])
+        curve = hv.Curve((x,y)).redim.values(runDate=[start_date, end_date])
+
+        kwargs['plot'] = curve
+        kwargs['plot_name'] = 'modeldrift'
+
+        return func(**kwargs)
+
+    return inner
+
+
 def config(func):
     def inner(**kwargs):
         if 'plot' in kwargs:
@@ -111,10 +138,27 @@ if __name__ == '__main__':
     except NameError:
         args = vars(parse_args())
 
+    
     viz_ddrift = (
         context(
             data(
                 data_drift(
+                    config(
+                        export
+                    )
+                )
+            )
+        )(**{
+            **args, 
+            'include_runinfo': True, 
+            'include_trainlog': True
+        }))
+    
+
+    viz_mdrift = (
+        context(
+            data(
+                model_drift(
                     config(
                         export
                     )

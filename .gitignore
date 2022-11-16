@@ -140,3 +140,4 @@ src/pipeline/dashboard/data/best_run.json
 src/pipeline/dashboard/dev_harness.py
 src/pipeline/dashboard/outputs
 **/mlruns/
+src/pipeline/dashboard/dev_context.py

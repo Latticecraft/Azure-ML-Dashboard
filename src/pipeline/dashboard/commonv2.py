@@ -44,13 +44,16 @@ def context(func):
         if 'workspace' not in kwargs:
             kwargs['workspace'] = run.experiment.workspace
 
+        if 'primary_metric' not in kwargs:
+            kwargs['primary_metric'] = tags['primary_metric'] if 'primary_metric' in tags.keys() else None
+
         kwargs['chrome'] = get_webdriver()
         kwargs['run'] = run
         kwargs['data'] = client.get_run(mlflow.active_run().info.run_id).data
         kwargs['project'] = tags['project'] if 'project' in tags.keys() else None
         kwargs['type'] = tags['type'] if 'type' in tags.keys() else None
         kwargs['label'] = tags['label'] if 'label' in tags.keys() else None
-
+        
         return func(**kwargs)
 
     return inner
@@ -93,35 +96,36 @@ def data(func):
         if kwargs['include_trainlog'] == True:
             df_trainlog = get_df(Path(kwargs['trainlog']))
 
-            runId = df_trainlog.sort_values('runDate', ascending=False).iloc[0]['sweep_get_best_model_runid']
-            
-            run = Run.get(workspace=kwargs['workspace'], run_id=runId)
-            run.download_file('outputs/model.pkl', output_file_path='data/model.pkl')
-            run.download_file('outputs/datasets.pkl', output_file_path='data/datasets.pkl')
-            run.download_file('outputs/best_run.json', output_file_path='data/best_run.json')
+        runId = df_trainlog.sort_values('runDate', ascending=False).iloc[0]['sweep_get_best_model_runid']
+        
+        run = Run.get(workspace=kwargs['workspace'], run_id=runId)
+        run.download_file('outputs/model.pkl', output_file_path='data/model.pkl')
+        run.download_file('outputs/datasets.pkl', output_file_path='data/datasets.pkl')
+        run.download_file('outputs/best_run.json', output_file_path='data/best_run.json')
 
-            with open('data/best_run.json', 'r') as f:
-                best_run = json.load(f)
-                imputer = best_run['imputer']
-                balancer = best_run['balancer']
+        with open('data/best_run.json', 'r') as f:
+            best_run = json.load(f)
+            imputer = best_run['imputer']
+            balancer = best_run['balancer']
 
-            model = joblib.load('data/model.pkl')
-            dict_files = pd.read_pickle('data/datasets.pkl')
+        model = joblib.load('data/model.pkl')
+        dict_files = pd.read_pickle('data/datasets.pkl')
 
-            X_train, y_train = eval_df(dict_files, 'train', imputer, balancer)
-            X_valid, y_valid = eval_df(dict_files, 'valid', imputer, balancer)
-            X_test, y_test = eval_df(dict_files, 'test', imputer, balancer)
+        X_train, y_train = eval_df(dict_files, 'train', imputer, balancer)
+        X_valid, y_valid = eval_df(dict_files, 'valid', imputer, balancer)
+        X_test, y_test = eval_df(dict_files, 'test', imputer, balancer)
 
-            kwargs['data_layer.folds'] = {
-                'X_train': X_train,
-                'y_train': y_train,
-                'X_valid': X_valid,
-                'y_valid': y_valid,
-                'X_test': X_test,
-                'y_test': y_test
-            }
+        kwargs['data_layer.folds'] = {
+            'X_train': X_train,
+            'y_train': y_train,
+            'X_valid': X_valid,
+            'y_valid': y_valid,
+            'X_test': X_test,
+            'y_test': y_test
+        }
 
         kwargs['data_layer.runinfo'] = df_runinfo
+        kwargs['data_layer.trainlog'] = df_trainlog
 
         return func(**kwargs)
 
