@@ -5,7 +5,7 @@ name: drift
 display_name: drift
 is_deterministic: False
 command: >-
-  python drift.py
+  python driftv2.py
   --datasets-pkl ${{inputs.datasets_pkl}}
   --runinfo ${{inputs.runinfo}}
   --trainlog ${{inputs.trainlog}}

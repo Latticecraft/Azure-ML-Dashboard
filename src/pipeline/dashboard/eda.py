@@ -15,7 +15,7 @@ hv.extension('bokeh')
 
 
 def get_samples_table(ctx, df_runinfo):
-    p = re.compile('y_(train|valid|test)_([0-9])$')
+    p = re.compile('y_(train|test)_([0-9])$')
 
     df = pd.DataFrame([{
         'value':v,
@@ -37,7 +37,7 @@ def get_label_distributions(ctx, dict_files):
     opts_dist = dict(filled=False, line_color=hv.Cycle())
     opts_overlay = dict(width=450, height=450)
 
-    dists = {k: hv.Distribution(dict_files[k][ctx['label']]).opts(**opts_dist) for k in ['y_train', 'y_valid', 'y_test']}
+    dists = {k: hv.Distribution(dict_files[k][ctx['label']]).opts(**opts_dist) for k in ['y_train', 'y_test']}
     overlay = hv.NdOverlay(dists).opts(**opts_overlay)
 
     return overlay
@@ -106,14 +106,11 @@ def main(ctx):
     data = LazyEval(dict_files)
 
     X_train, y_train = data.get('train', imputer, balancer)
-    X_valid, y_valid = data.get('valid', imputer, balancer)
     X_test, y_test = data.get('test', imputer, balancer)
 
     dict_new = {
         'X_train': X_train,
         'y_train': y_train,
-        'X_valid': X_valid,
-        'y_valid': y_valid,
         'X_test': X_test,
         'y_test': y_test
     }
