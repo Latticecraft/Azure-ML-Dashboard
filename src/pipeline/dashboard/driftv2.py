@@ -156,10 +156,6 @@ if __name__ == '__main__':
             'include_runinfo': True, 
             'include_trainlog': True
         }))
-    
-    '''
-    
-    '''
 
     viz_mdrift = (
         context(

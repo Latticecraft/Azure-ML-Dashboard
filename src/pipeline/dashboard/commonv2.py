@@ -135,8 +135,8 @@ def data(func):
 def export(**kwargs):
     try:
         if 'plot' in kwargs:
-            #hv.save(kwargs['plot'], f'outputs/{kwargs["plot_name"]}.html')
-            #export_png(hv.render(kwargs['plot']), filename=f'outputs/{kwargs["plot_name"]}.png', webdriver=kwargs['chrome'])
+            hv.save(kwargs['plot'], f'outputs/{kwargs["plot_name"]}.html')
+            export_png(hv.render(kwargs['plot']), filename=f'outputs/{kwargs["plot_name"]}.png', webdriver=kwargs['chrome'])
             return kwargs['plot']
     except RuntimeError:
         pass
