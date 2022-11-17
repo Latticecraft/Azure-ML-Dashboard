@@ -33,41 +33,44 @@ def data_drift(func):
                 .groupby('runDate')
                 .mean()
                 .reset_index(drop=False)
-                .sort_values('runDate', ascending=False))
+                .sort_values('runDate', ascending=False)
+                .fillna(0))
 
         print(f'len df_1: {len(df_1)}')
 
         df_all = pd.DataFrame()
-        for rd in df_1['runDate'].head(np.min([len(df_1)-2, 10])):
+        for rd in df_1['runDate'].head(15):
             df_2 = (pd.DataFrame([{
                 'feature': p.match(k)[1],
-                'divergence_mrr': np.abs(v[-1]-np.mean(v[:-1])/(np.std(v[:-1]) or 1))
-            } for (k,v) in df_1[df_1['runDate'] < rd].drop(['runDate'], axis=1).dropna(thresh=2, axis=1).to_dict(orient='list').items()])
+                'divergence_mrr': np.abs(v[-1]-np.mean(v[:-1])/(np.std(v[:-1]) or 1)) if len(v) > 1 else 0
+            } for (k,v) in df_1[df_1['runDate'] <= rd].drop(['runDate'], axis=1).to_dict(orient='list').items()])
             .sort_values('divergence_mrr', ascending=False)
             .assign(runDate=rd))
             df_all = pd.concat([df_all, df_2], ignore_index=True)
 
         print(f'len df_all: {len(df_all)}')
 
-        if len(np.unique(df_all['runDate'])) > 5:
-            # get top 10 divergent features
-            top_divergences = (df_all
-                .sort_values('divergence_mrr', ascending=False)
-                .drop_duplicates(subset=['feature'])
-                .head(10))['feature']
+        # get top 10 divergent features
+        top_divergences = (df_all
+            .sort_values('divergence_mrr', ascending=False)
+            .drop_duplicates(subset=['feature'])
+            .head(10))['feature']
 
-            # filter out features not in above list
-            df_all = (df_all
-                .sort_values('runDate', ascending=False)
-                .merge(top_divergences, on='feature', how='inner'))
+        # filter out features not in above list
+        df_all = (df_all
+            .sort_values('runDate', ascending=False)
+            .merge(top_divergences, on='feature', how='inner'))
 
-            x = np.array(df_all['runDate'])
-            y = np.array(df_all['feature'])
-            v = np.array(df_all['divergence_mrr'])
-            hm = hv.HeatMap((x,y,v))
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=14)
 
-            kwargs['plot'] = hm
-            kwargs['plot_name'] = 'datadrift'
+        x = np.array(df_all['runDate'])
+        y = np.array(df_all['feature'])
+        v = np.array(df_all['divergence_mrr'])
+        hm = hv.HeatMap((x,y,v)).redim.values(runDate=[start_date, end_date])
+
+        kwargs['plot'] = hm
+        kwargs['plot_name'] = 'datadrift'
 
         return func(**kwargs)
 
@@ -154,6 +157,9 @@ if __name__ == '__main__':
             'include_trainlog': True
         }))
     
+    '''
+    
+    '''
 
     viz_mdrift = (
         context(
