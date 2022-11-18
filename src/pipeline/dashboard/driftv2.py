@@ -8,6 +8,7 @@ import re
 import sys
 
 from datetime import datetime, timedelta
+from distutils.dir_util import copy_tree
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(dir_path)
@@ -171,5 +172,7 @@ if __name__ == '__main__':
             'include_runinfo': True, 
             'include_trainlog': True
         }))
+
+    copy_tree('outputs', args['transformed_data'])
 
 # %%

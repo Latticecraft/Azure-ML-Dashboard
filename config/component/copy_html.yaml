@@ -12,7 +12,6 @@ command: >-
   --input3 ${{inputs.input3}}
   --input4 ${{inputs.input4}}
   --input5 ${{inputs.input5}}
-  --html ${{outputs.html}}
 code: ../../src/pipeline/dashboard
 environment: azureml:lgbmholoenv@latest
 inputs:
@@ -27,7 +26,4 @@ inputs:
   input4:
     type: path
   input5:
-    type: path
-outputs:
-  html:
     type: path
