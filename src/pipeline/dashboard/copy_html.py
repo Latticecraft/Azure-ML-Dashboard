@@ -1,18 +1,15 @@
 # imports
 import os, argparse
-import numpy as np
-import pandas as pd
 import mlflow
 
 from azureml.core import Dataset, Datastore, Run
 from azureml.data.datapath import DataPath
 from datetime import datetime
-from distutils.dir_util import copy_tree
-from pathlib import Path
 
 
 # define functions     
 def main(ctx):
+    pass
     # copy inputs to output
     datastore = Datastore.get(ctx['run'].experiment.workspace, 'output')
 
@@ -21,25 +18,25 @@ def main(ctx):
         overwrite=True)
 
     Dataset.File.upload_directory(src_dir=ctx['args'].input1,
-        target=DataPath(datastore, f'{ctx["project"]}/html/latest'),
+        target=DataPath(datastore, f'Bank-Campaign/html/latest'),
         overwrite=True)
 
     Dataset.File.upload_directory(src_dir=ctx['args'].input2,
-        target=DataPath(datastore, f'{ctx["project"]}/html/latest'),
+        target=DataPath(datastore, f'Bank-Campaign/html/latest'),
         overwrite=True)
 
     Dataset.File.upload_directory(src_dir=ctx['args'].input3,
-        target=DataPath(datastore, f'{ctx["project"]}/html/latest'),
+        target=DataPath(datastore, f'Bank-Campaign/html/latest'),
         overwrite=True)
 
     Dataset.File.upload_directory(src_dir=ctx['args'].input4,
-        target=DataPath(datastore, f'{ctx["project"]}/html/latest'),
+        target=DataPath(datastore, f'Bank-Campaign/html/latest'),
         overwrite=True)
 
     Dataset.File.upload_directory(src_dir=ctx['args'].input5,
-        target=DataPath(datastore, f'{ctx["project"]}/html/latest'),
+        target=DataPath(datastore, f'Bank-Campaign/html/latest'),
         overwrite=True)
-
+    
     now = datetime.now()
     ts = now.strftime('%m%d%y')
 
@@ -89,7 +86,6 @@ def parse_args():
     parser.add_argument("--input3", type=str)
     parser.add_argument("--input4", type=str)
     parser.add_argument("--input5", type=str)
-    parser.add_argument("--html", type=str)
 
     # parse args
     args = parser.parse_args()
